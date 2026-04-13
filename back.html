@@ -1,0 +1,2577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoViz — Algorithm Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060b14;--surface:#0d1526;--surface2:#111e35;--border:#1e3058;
+  --cyan:#00e5ff;--amber:#ffc107;--green:#00e676;--pink:#ff4081;--purple:#ce93d8;
+  --text:#cdd8f0;--text-dim:#5a7099;
+  --font-mono:'Fira Code',monospace;--font-head:'Syne',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+/* TOPBAR */
+.topbar{display:flex;align-items:center;padding:0 20px;height:52px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;gap:16px;z-index:100;}
+.logo{font-family:var(--font-head);font-size:21px;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo span{-webkit-text-fill-color:var(--amber);}
+.tagline{font-size:11px;color:var(--text-dim);border-left:1px solid var(--border);padding-left:16px;}
+.sb-hint{margin-left:auto;font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
+.sb-hint-arrow{display:inline-block;animation:nudge 2s ease-in-out infinite;}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden;position:relative;}
+/* SIDEBAR WRAP */
+.sidebar-wrap{width:38px;flex-shrink:0;position:relative;z-index:80;}
+.sidebar{
+  position:absolute;left:0;top:0;height:100%;width:38px;
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow:hidden;
+  transition:width .28s cubic-bezier(.4,0,.2,1),box-shadow .28s;
+  display:flex;flex-direction:column;
+}
+.sidebar-wrap:hover .sidebar{
+  width:244px;
+  box-shadow:8px 0 32px rgba(0,0,0,.55);
+  overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+.sidebar-wrap:hover .sidebar::-webkit-scrollbar{width:3px;}
+.sidebar-wrap:hover .sidebar::-webkit-scrollbar-thumb{background:var(--border);}
+.sb-icons{display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px;min-width:38px;transition:opacity .15s;flex-shrink:0;}
+.sidebar-wrap:hover .sb-icons{opacity:0;pointer-events:none;height:0;overflow:hidden;padding:0;}
+.cat-icon-pill{width:30px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;color:var(--text-dim);transition:all .15s;}
+.cat-icon-pill:hover{background:var(--surface2);color:var(--cyan);}
+.cat-icon-pill.has-active{color:var(--cyan);}
+.sb-list{min-width:244px;opacity:0;transition:opacity .18s .12s;pointer-events:none;flex-shrink:0;}
+.sidebar-wrap:hover .sb-list{opacity:1;pointer-events:auto;}
+.cat-header{padding:11px 16px 5px;font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;font-family:var(--font-head);white-space:nowrap;}
+.algo-item{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:11.5px;cursor:pointer;color:var(--text-dim);transition:all .15s;border-left:2px solid transparent;white-space:nowrap;}
+.algo-item:hover{background:var(--surface2);color:var(--text);}
+.algo-item.active{background:rgba(0,229,255,.07);color:var(--cyan);border-left:2px solid var(--cyan);}
+.algo-item .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.cat-divider{height:1px;background:var(--border);margin:5px 0;}
+.subcat-header{padding:6px 16px 3px 22px;font-size:9px;letter-spacing:1.8px;color:var(--amber);text-transform:uppercase;font-family:var(--font-head);white-space:nowrap;opacity:.75;}
+.algo-item.subcat-item{padding-left:26px;font-size:11px;}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.algo-header{padding:14px 22px 10px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;flex-shrink:0;}
+.algo-title{font-family:var(--font-head);font-size:19px;font-weight:700;color:var(--cyan);}
+.algo-badge{padding:3px 10px;border-radius:20px;font-size:10px;background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.2);}
+.algo-desc{font-size:11px;color:var(--text-dim);margin-top:3px;line-height:1.6;}
+/* CONTROLS */
+.controls{display:flex;align-items:center;gap:8px;padding:8px 18px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap;}
+.btn{padding:5px 13px;border-radius:4px;border:none;font-family:var(--font-mono);font-size:11px;cursor:pointer;transition:all .15s;font-weight:500;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:var(--cyan);color:#000;}
+.btn-primary:hover{background:#33eaff;}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--cyan);color:var(--cyan);}
+.btn-danger{background:transparent;color:var(--pink);border:1px solid rgba(255,64,129,.3);}
+.btn-danger:hover{background:rgba(255,64,129,.1);}
+.btn-arena{background:rgba(206,147,216,.1);color:var(--purple);border:1px solid rgba(206,147,216,.25);}
+.btn-arena:hover,.btn-arena.active{background:rgba(206,147,216,.22);border-color:var(--purple);box-shadow:0 0 8px rgba(206,147,216,.25);}
+.btn-step{padding:5px 9px;font-size:13px;background:transparent;color:var(--text-dim);border:1px solid var(--border);}
+.btn-step:hover{color:var(--cyan);border-color:var(--cyan);}
+.btn-input{background:rgba(0,229,255,.07);color:var(--cyan);border:1px solid rgba(0,229,255,.2);font-size:10px;}
+.btn-input:hover,.btn-input.active{background:rgba(0,229,255,.15);border-color:var(--cyan);}
+.btn-mode{background:transparent;color:var(--text-dim);border:1px solid var(--border);font-size:10px;padding:4px 10px;}
+.btn-mode.active{background:rgba(0,229,255,.1);color:var(--cyan);border-color:rgba(0,229,255,.4);}
+.ctrl-sep{width:1px;height:18px;background:var(--border);margin:0 2px;flex-shrink:0;}
+.ctrl-label{font-size:10px;color:var(--text-dim);}
+.ctrl-group{display:flex;align-items:center;gap:6px;}
+input[type=range]{-webkit-appearance:none;width:88px;height:3px;background:var(--border);border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--cyan);cursor:pointer;}
+input[type=number],input[type=text]{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px;width:80px;outline:none;transition:border-color .15s;}
+input:focus{border-color:var(--cyan);}
+.status-badge{padding:3px 10px;border-radius:20px;font-size:10px;background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);white-space:nowrap;}
+.status-badge.running{background:rgba(255,193,7,.1);color:var(--amber);border-color:rgba(255,193,7,.2);}
+.status-badge.error{background:rgba(255,64,129,.1);color:var(--pink);border-color:rgba(255,64,129,.2);}
+/* CUSTOM INPUT PANEL */
+#input-panel{display:none;border-bottom:1px solid var(--border);background:#07101f;flex-shrink:0;overflow:hidden;}
+#input-panel.open{display:flex;flex-direction:column;}
+.input-panel-inner{padding:10px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+.input-panel-inner .field-group{display:flex;align-items:center;gap:6px;}
+.input-panel-inner label{font-size:10px;color:var(--text-dim);}
+.input-panel-inner input[type=text]{width:220px;}
+.input-panel-inner .hint{font-size:9px;color:var(--text-dim);font-style:italic;}
+.apply-btn{padding:5px 13px;border-radius:4px;border:none;background:var(--purple);color:#000;font-family:var(--font-mono);font-size:11px;cursor:pointer;font-weight:600;}
+.apply-btn:hover{background:#d9a8e8;}
+.input-error{font-size:10px;color:var(--pink);padding:0 18px 8px;display:none;}
+/* VIZ */
+.viz-body{flex:1;display:flex;overflow:hidden;}
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;}
+canvas{display:block;max-width:100%;}
+/* CODE PANEL */
+.code-panel{width:272px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
+.code-panel-head{padding:8px 13px;border-bottom:1px solid var(--border);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-head);}
+.code-content{flex:1;overflow-y:auto;padding:10px 13px;font-size:11px;line-height:1.85;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.code-content::-webkit-scrollbar{width:3px;}
+.code-content::-webkit-scrollbar-thumb{background:var(--border);}
+.code-line{padding:1px 3px;border-radius:2px;transition:background .12s;}
+.code-line.highlight{background:rgba(0,229,255,.13);color:var(--cyan);}
+.kw{color:var(--purple);}
+.fn{color:var(--cyan);}
+.cm{color:var(--text-dim);}
+.num{color:var(--amber);}
+.str{color:var(--green);}
+.info-panel{padding:9px 13px;border-top:1px solid var(--border);font-size:10px;color:var(--text-dim);line-height:1.75;}
+.info-panel b{color:var(--amber);}
+/* EDGE CASES */
+.edge-panel{padding:8px 13px 10px;border-top:1px solid var(--border);}
+.edge-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);font-family:var(--font-head);margin-bottom:5px;opacity:.7;}
+.edge-case{font-size:9.5px;color:var(--text-dim);padding:2px 0 2px 7px;border-left:2px solid rgba(255,193,7,.2);margin-bottom:3px;line-height:1.55;}
+/* WELCOME */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--text-dim);}
+.welcome-icon{font-size:46px;opacity:.2;}
+.welcome h2{font-family:var(--font-head);color:var(--text);font-size:18px;}
+.welcome p{font-size:11.5px;text-align:center;max-width:370px;line-height:1.7;}
+/* GRID */
+.grid-container{display:inline-grid;gap:2px;user-select:none;}
+.grid-cell{width:22px;height:22px;border-radius:2px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:background .07s;}
+.grid-cell.wall{background:#253a6e;border-color:#253a6e;}
+.grid-cell.start{background:var(--green);border-color:var(--green);}
+.grid-cell.end{background:var(--pink);border-color:var(--pink);}
+.grid-cell.visited{background:rgba(0,229,255,.22);border-color:rgba(0,229,255,.35);}
+.grid-cell.path{background:var(--amber);border-color:var(--amber);}
+.grid-cell.frontier{background:rgba(206,147,216,.35);border-color:var(--purple);}
+/* GRAPH EXPLAIN PANEL */
+.graph-explain-wrap{width:100%;margin-top:8px;flex-shrink:0;}
+.graph-path-bar{background:#0a1628;border:1px solid var(--border);border-radius:4px;padding:5px 12px;font-size:11px;color:var(--amber);font-family:var(--font-mono);min-height:26px;letter-spacing:.5px;}
+.graph-backend{background:#07101f;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:5px;min-height:68px;position:relative;overflow:hidden;}
+.graph-backend-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-head);margin-bottom:5px;}
+.graph-explain-line{font-size:10.5px;font-family:var(--font-mono);line-height:1.65;transition:opacity .35s,transform .35s;margin-bottom:1px;}
+.graph-explain-line.old{opacity:.28;transform:translateY(-2px);}
+.graph-explain-line.cur{color:var(--cyan);font-weight:600;}
+.graph-explain-line.prev{color:var(--text-dim);}
+.ds-badge{display:inline-block;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);border-radius:3px;padding:0 5px;font-size:10px;color:var(--cyan);}
+/* DP TABLE */
+.dp-table{border-collapse:collapse;font-size:11px;}
+.dp-table td,.dp-table th{width:30px;height:27px;text-align:center;border:1px solid var(--border);transition:all .18s;}
+.dp-table th{background:var(--surface2);color:var(--text-dim);font-weight:500;}
+.dp-table td{background:var(--surface);}
+.dp-table td.active{background:rgba(0,229,255,.2);color:var(--cyan);}
+.dp-table td.done{background:rgba(0,230,118,.1);color:var(--green);}
+.dp-table td.highlight{background:rgba(255,193,7,.15);color:var(--amber);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Algo<span>Viz</span></div>
+  <div class="tagline">Interactive Algorithm Visualizer &bull; 25 Algorithms</div>
+  <div class="sb-hint"><span class="sb-hint-arrow">›</span> hover left edge to browse</div>
+</div>
+<div class="layout">
+  <div class="sidebar-wrap" id="sidebar-wrap">
+    <div class="sidebar" id="sidebar">
+      <div class="sb-icons" id="sb-icons"></div>
+      <div class="sb-list" id="sb-list"></div>
+    </div>
+  </div>
+  <div class="main" id="main">
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">⬡</div>
+      <h2>Pick an Algorithm</h2>
+      <p>Hover the left edge → choose from 23 algorithms. Every visualizer supports <b style="color:var(--purple)">Arena mode</b> — step forward &amp; backward through any animation.</p>
+    </div>
+    <div id="algo-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="algo-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="algo-title" id="av-title"></div>
+            <div class="algo-badge" id="av-badge"></div>
+          </div>
+          <div class="algo-desc" id="av-desc"></div>
+        </div>
+      </div>
+      <div class="controls" id="av-controls"></div>
+      <div id="input-panel">
+        <div class="input-panel-inner" id="input-panel-inner"></div>
+        <div class="input-error" id="input-error"></div>
+      </div>
+      <div class="viz-body">
+        <div class="canvas-area" id="av-canvas" style="flex-direction:column;align-items:center;justify-content:flex-start;padding-top:12px;"></div>
+        <div class="code-panel">
+          <div class="code-panel-head">Pseudocode</div>
+          <div class="code-content" id="av-code"></div>
+          <div class="info-panel" id="av-info"></div>
+          <div class="edge-panel" id="av-edges" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════
+// ALGORITHM REGISTRY  (with edge cases)
+// ═══════════════════════════════════════════
+const ALGOS = {
+  bubble:{name:"Bubble Sort",cat:"Sorting",badge:"O(n²)",desc:"Repeatedly swap adjacent elements if out of order. Stops early if no swaps.",type:"sort",
+    code:["<span class='kw'>function</span> <span class='fn'>bubbleSort</span>(arr):","  n = arr.length","  <span class='kw'>for</span> i = 0 <span class='kw'>to</span> n-1:","    swapped = <span class='kw'>false</span>","    <span class='kw'>for</span> j = 0 <span class='kw'>to</span> n-i-2:","      <span class='kw'>if</span> arr[j] > arr[j+1]:","        swap(arr[j], arr[j+1])","        swapped = <span class='kw'>true</span>","    <span class='kw'>if</span> !swapped: <span class='kw'>break</span>","  <span class='kw'>return</span> arr"],
+    info:"<b>Time:</b> O(n²) avg/worst &bull; O(n) best<br><b>Space:</b> O(1)<br><b>Stable:</b> Yes",
+    cases:["Already sorted → O(n) due to early exit","All equal → max comparisons, zero swaps","Reverse sorted → worst case n(n-1)/2 swaps","Single element → returns immediately"]},
+  merge:{name:"Merge Sort",cat:"Sorting",badge:"O(n log n)",desc:"Divide array recursively then merge sorted halves. Stable, consistent O(n log n).",type:"sort",
+    code:["<span class='kw'>function</span> <span class='fn'>mergeSort</span>(arr):","  <span class='kw'>if</span> arr.length <= 1: <span class='kw'>return</span>","  mid = arr.length / 2","  left  = mergeSort(arr[0..mid])","  right = mergeSort(arr[mid..])","  <span class='kw'>return</span> <span class='fn'>merge</span>(left, right)","","<span class='kw'>function</span> <span class='fn'>merge</span>(L, R):","  result = []","  <span class='kw'>while</span> L and R not empty:","    <span class='kw'>if</span> L[0] <= R[0]: result.push(L.shift())","    <span class='kw'>else</span>: result.push(R.shift())","  <span class='kw'>return</span> [...result, ...L, ...R]"],
+    info:"<b>Time:</b> O(n log n) all cases<br><b>Space:</b> O(n) auxiliary<br><b>Stable:</b> Yes",
+    cases:["Single element → base case, returns immediately","Already sorted → still splits and merges fully","Odd-length arrays → ceil/floor split, handled correctly","Stack depth: O(log n) recursive calls"]},
+  quick:{name:"Quick Sort",cat:"Sorting",badge:"O(n log n)",desc:"Pick pivot, partition around it, recursively sort sub-arrays.",type:"sort",
+    code:["<span class='kw'>function</span> <span class='fn'>quickSort</span>(arr, lo, hi):","  <span class='kw'>if</span> lo >= hi: <span class='kw'>return</span>","  p = <span class='fn'>partition</span>(arr, lo, hi)","  quickSort(arr, lo, p-1)","  quickSort(arr, p+1, hi)","","<span class='kw'>function</span> <span class='fn'>partition</span>(arr, lo, hi):","  pivot = arr[hi]","  i = lo - 1","  <span class='kw'>for</span> j = lo <span class='kw'>to</span> hi-1:","    <span class='kw'>if</span> arr[j] <= pivot: i++; swap(arr[i],arr[j])","  swap(arr[i+1], arr[hi])","  <span class='kw'>return</span> i + 1"],
+    info:"<b>Time:</b> O(n log n) avg &bull; O(n²) worst<br><b>Space:</b> O(log n)<br><b>Stable:</b> No",
+    cases:["Sorted array with last-element pivot → O(n²) worst case","All equal elements → O(n²) without 3-way partition","Random pivot selection reduces worst-case probability","Duplicate values → partition still correct"]},
+  heap:{name:"Heap Sort",cat:"Sorting",badge:"O(n log n)",desc:"Build a max-heap then repeatedly extract maximum. In-place, O(n log n) guaranteed.",type:"sort",
+    code:["<span class='kw'>function</span> <span class='fn'>heapSort</span>(arr):","  n = arr.length","  <span class='kw'>for</span> i = n/2-1 <span class='kw'>downto</span> 0: heapify(arr,n,i)","  <span class='kw'>for</span> i = n-1 <span class='kw'>downto</span> 1:","    swap(arr[0], arr[i])","    heapify(arr, i, 0)","","<span class='kw'>function</span> <span class='fn'>heapify</span>(arr, n, i):","  largest = i","  l = 2*i+1, r = 2*i+2","  <span class='kw'>if</span> l<n and arr[l]>arr[largest]: largest=l","  <span class='kw'>if</span> r<n and arr[r]>arr[largest]: largest=r","  <span class='kw'>if</span> largest != i: swap; heapify(arr,n,largest)"],
+    info:"<b>Time:</b> O(n log n) all cases<br><b>Space:</b> O(1)<br><b>Stable:</b> No",
+    cases:["Build phase is O(n) — a non-obvious fact","Not stable: equal elements may change relative order","Single element → heapify is a no-op","All equal → valid max-heap on first pass, no swaps during extract"]},
+  sliding:{name:"Sliding Window",cat:"Array",badge:"O(n)",desc:"Fixed-size window slides over array finding max sum of k consecutive elements.",type:"array_sw",
+    code:["<span class='kw'>function</span> <span class='fn'>maxSumWindow</span>(arr, k):","  <span class='kw'>if</span> n < k: <span class='kw'>return</span> error","  sum = Σ arr[0..k-1]","  max = sum; maxStart = 0","  <span class='kw'>for</span> i = 1 <span class='kw'>to</span> n-k:","    sum += arr[i+k-1]","    sum -= arr[i-1]","    <span class='kw'>if</span> sum > max: max=sum; maxStart=i","  <span class='kw'>return</span> max, maxStart"],
+    info:"<b>Time:</b> O(n)<br><b>Space:</b> O(1)<br><b>Use case:</b> Subarray sums, max lengths",
+    cases:["k > array length → invalid, must guard","k = array length → window covers entire array","k = 1 → trivial, max sum = max element","All negatives → max sum = least-negative window","k = 0 → undefined, must reject"]},
+  twoptr:{name:"Two Pointer",cat:"Array",badge:"O(n)",desc:"Pointers from both ends converge to find pair summing to target in sorted array.",type:"array_tp",
+    code:["<span class='kw'>function</span> <span class='fn'>twoSum</span>(arr, target):","  left = 0; right = arr.length - 1","  <span class='kw'>while</span> left < right:","    sum = arr[left] + arr[right]","    <span class='kw'>if</span> sum == target: <span class='kw'>return</span> [left, right]","    <span class='kw'>else if</span> sum < target: left++","    <span class='kw'>else</span>: right--","  <span class='kw'>return</span> -1  <span class='cm'>// not found</span>"],
+    info:"<b>Time:</b> O(n)<br><b>Space:</b> O(1)<br><b>Requires:</b> Sorted array",
+    cases:["Array not sorted → wrong results, must sort first","No pair sums to target → pointers meet, return -1","Target < 2×min or > 2×max → impossible immediately","Duplicates in array → pairs with duplicates work correctly"]},
+  kadane:{name:"Kadane's Algorithm",cat:"Array",badge:"O(n)",desc:"Maximum subarray sum in a single pass. Resets the running sum whenever extending would hurt.",type:"array_kadane",
+    code:["<span class='kw'>function</span> <span class='fn'>kadane</span>(arr):","  maxSum = curSum = arr[0]","  start = end = 0","  <span class='kw'>for</span> i = 1 <span class='kw'>to</span> n-1:","    <span class='kw'>if</span> curSum + arr[i] < arr[i]:","      curSum = arr[i]  <span class='cm'>// reset window</span>","    <span class='kw'>else</span>: curSum += arr[i]  <span class='cm'>// extend</span>","    <span class='kw'>if</span> curSum > maxSum:","      maxSum = curSum","      start..end updated","  <span class='kw'>return</span> maxSum, arr[start..end]"],
+    info:"<b>Time:</b> O(n)<br><b>Space:</b> O(1)<br><b>Use:</b> Stock profit, signal peaks",
+    cases:["All negatives → maxSum = the least-negative element","Single element → trivially returned as-is","All zeros → maxSum = 0","Large alternating +/− → window resets frequently","Multiple equal max subarrays → leftmost is returned"]},
+  boyermoore:{name:"Boyer-Moore Vote",cat:"Array",badge:"O(n)",desc:"Find the majority element (>n/2 occurrences) in two linear passes using O(1) space.",type:"array_bm",
+    code:["<span class='kw'>function</span> <span class='fn'>majorityVote</span>(arr):","  candidate=<span class='kw'>null</span>; count=0","  <span class='kw'>for</span> x <span class='kw'>in</span> arr:  <span class='cm'>// Phase 1</span>","    <span class='kw'>if</span> count == 0:","      candidate=x; count=1","    <span class='kw'>else if</span> x == candidate: count++","    <span class='kw'>else</span>: count--","  <span class='cm'>// Phase 2: verify</span>","  votes = count(arr, candidate)","  <span class='kw'>return</span> candidate <span class='kw'>if</span> votes > n/2","  <span class='kw'>else</span>: <span class='kw'>return</span> <span class='kw'>null</span>"],
+    info:"<b>Time:</b> O(n)<br><b>Space:</b> O(1)<br><b>Requires:</b> Phase 2 for guaranteed correctness",
+    cases:["No majority → Phase 2 catches the false positive","Entire array same value → candidate set on first element","n=1 → trivially the majority","Even 50/50 split → no majority, Phase 2 rejects","Works when majority element value is 0"]},
+  bfs_path:{name:"BFS Pathfinding",cat:"Pathfinding",badge:"Shortest Path",desc:"Explores level by level — guarantees shortest path on unweighted grids.",type:"grid",algo:"bfs",
+    code:["<span class='kw'>function</span> <span class='fn'>BFS</span>(grid, start, end):","  queue = [start]","  visited = {start: null}","  <span class='kw'>while</span> queue not empty:","    node = queue.shift()","    <span class='kw'>if</span> node == end: <span class='kw'>break</span>","    <span class='kw'>for</span> nb <span class='kw'>in</span> getNeighbors(node):","      <span class='kw'>if</span> nb not in visited:","        visited[nb] = node; queue.push(nb)","  <span class='kw'>return</span> reconstructPath(visited, end)"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V)<br><b>Optimal:</b> Yes (unweighted)",
+    cases:["Start = End → path length 0","End blocked by walls → no path found","Multiple shortest paths → BFS finds one deterministically","Large grid → memory O(V) can be significant"]},
+  dfs_path:{name:"DFS Pathfinding",cat:"Pathfinding",badge:"Explores Deep",desc:"Goes as deep as possible before backtracking. Does NOT guarantee shortest path.",type:"grid",algo:"dfs",
+    code:["<span class='kw'>function</span> <span class='fn'>DFS</span>(grid, start, end):","  stack = [start]","  visited = {start: null}","  <span class='kw'>while</span> stack not empty:","    node = stack.pop()","    <span class='kw'>if</span> node == end: <span class='kw'>break</span>","    <span class='kw'>for</span> nb <span class='kw'>in</span> getNeighbors(node):","      <span class='kw'>if</span> nb not in visited:","        visited[nb] = node; stack.push(nb)","  <span class='kw'>return</span> reconstructPath(visited, end)"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V)<br><b>Optimal:</b> No",
+    cases:["May find a very long path when a short one exists","End unreachable → stack empties, no path","Must track visited to avoid infinite loops in cycles","Start = End → found in first iteration"]},
+  dijkstra:{name:"Dijkstra's",cat:"Pathfinding",badge:"Weighted",desc:"Greedy shortest path on weighted graphs via priority queue.",type:"grid",algo:"dijkstra",
+    code:["<span class='kw'>function</span> <span class='fn'>dijkstra</span>(grid, start, end):","  dist = {start:0, rest:∞}","  pq = MinHeap([(0, start)])","  <span class='kw'>while</span> pq not empty:","    (d, node) = pq.pop()","    <span class='kw'>if</span> node==end: <span class='kw'>break</span>","    <span class='kw'>for</span> (nb,w) in neighbors(node):","      nd = d + w","      <span class='kw'>if</span> nd < dist[nb]:","        dist[nb]=nd; pq.push((nd,nb))"],
+    info:"<b>Time:</b> O((V+E) log V)<br><b>Space:</b> O(V)<br><b>Optimal:</b> Yes (non-neg weights)",
+    cases:["Negative weights → wrong results, use Bellman-Ford","All weights equal → degenerates to BFS","End unreachable → dist[end] stays ∞","Dense vs sparse graphs → different efficiency trade-offs"]},
+  astar:{name:"A* Search",cat:"Pathfinding",badge:"Heuristic",desc:"Dijkstra + Manhattan heuristic. Fastest when good heuristic is available.",type:"grid",algo:"astar",
+    code:["<span class='kw'>function</span> <span class='fn'>aStar</span>(grid, start, end):","  g={start:0}; h=manhattan(start,end)","  open=MinHeap([(g+h, start)])","  <span class='kw'>while</span> open not empty:","    (_,node)=open.pop()","    <span class='kw'>if</span> node==end: <span class='kw'>break</span>","    <span class='kw'>for</span> nb in neighbors(node):","      ng = g[node]+1","      <span class='kw'>if</span> ng < g[nb]:","        g[nb]=ng; open.push((ng+h(nb,end),nb))"],
+    info:"<b>Time:</b> O(E log V)<br><b>Space:</b> O(V)<br><b>Optimal:</b> Yes (admissible h)",
+    cases:["Inadmissible heuristic → may return suboptimal path","h=0 everywhere → reduces to Dijkstra","h = exact cost → explores minimal nodes (ideal)","End unreachable → open set empties, no solution"]},
+  graph_bfs:{name:"Graph BFS",cat:"Graph",subcat:"Graph Traversal",badge:"O(V+E)",desc:"Breadth-first traversal. Visits all neighbours before going deeper.",type:"graph",algo:"bfs",
+    code:["<span class='kw'>function</span> <span class='fn'>BFS</span>(graph, start):","  visited=Set([start]); queue=[start]","  order=[]","  <span class='kw'>while</span> queue not empty:","    node=queue.shift(); order.push(node)","    <span class='kw'>for</span> nb in graph[node]:","      <span class='kw'>if</span> nb not in visited:","        visited.add(nb); queue.push(nb)","  <span class='kw'>return</span> order"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V)<br><b>Use:</b> Shortest path, level order",
+    cases:["Disconnected graph → only nodes reachable from start visited","Single node → returns [start] immediately","Dense graph → queue may hold O(V) nodes at once","Self-loops → must check visited before enqueuing"]},
+  graph_dfs:{name:"Graph DFS",cat:"Graph",subcat:"Graph Traversal",badge:"O(V+E)",desc:"Depth-first traversal. Explores as deep as possible before backtracking.",type:"graph",algo:"dfs",
+    code:["<span class='kw'>function</span> <span class='fn'>DFS</span>(graph, node, visited):","  visited.add(node); order.push(node)","  <span class='kw'>for</span> nb in graph[node]:","    <span class='kw'>if</span> nb not in visited:","      DFS(graph, nb, visited)"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V) stack<br><b>Use:</b> Topological sort, cycle detect",
+    cases:["Very deep graph → recursive DFS risks stack overflow","Back edges → indicate cycles in directed graphs","Disconnected graph → must loop over all nodes","Single node → trivially visited and returned"]},
+  topo:{name:"Topological Sort",cat:"Graph",subcat:"Graph Traversal",badge:"DAG",desc:"Linear ordering of DAG vertices. Every edge u→v has u before v. Kahn's algorithm.",type:"graph",algo:"topo",
+    code:["<span class='kw'>function</span> <span class='fn'>topoSort</span>(graph):","  inDeg=count incoming edges","  queue=nodes with inDeg==0","  result=[]","  <span class='kw'>while</span> queue not empty:","    node=queue.shift(); result.push(node)","    <span class='kw'>for</span> nb in graph[node]:","      inDeg[nb]--","      <span class='kw'>if</span> inDeg[nb]==0: queue.push(nb)","  <span class='kw'>return</span> result"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V)<br><b>Use:</b> Build systems, scheduling",
+    cases:["Cycle exists → no valid topological order (detect: result.length < V)","Multiple valid orderings → Kahn's gives one based on queue order","Disconnected DAG → nodes with no incoming edges from all components start","Single source → always appears first in output"]},
+  dsu:{name:"Disjoint Set Union",cat:"Graph",subcat:"Graph Traversal",badge:"Near O(1)",desc:"Union-Find with path compression + rank union. Tracks connected components.",type:"dsu",
+    code:["<span class='kw'>function</span> <span class='fn'>find</span>(parent, x):","  <span class='kw'>if</span> parent[x]!=x:","    parent[x]=find(parent,parent[x])","  <span class='kw'>return</span> parent[x]","","<span class='kw'>function</span> <span class='fn'>union</span>(parent, rank, x, y):","  rx=find(x); ry=find(y)","  <span class='kw'>if</span> rx==ry: <span class='kw'>return</span>","  <span class='kw'>if</span> rank[rx]<rank[ry]: swap(rx,ry)","  parent[ry]=rx","  <span class='kw'>if</span> rank[rx]==rank[ry]: rank[rx]++"],
+    info:"<b>Time:</b> O(α(n)) per op<br><b>Space:</b> O(n)<br><b>Use:</b> MST, connected components",
+    cases:["Union of already-connected nodes → find returns same root, no-op","Self-union (x,x) → correctly ignored","Without path compression → O(log n) per op","α(n) ≤ 4 for any practical n — effectively O(1)"]},
+  cycle_undirected:{name:"Cycle — Undirected",cat:"Graph",subcat:"Cycles",badge:"O(V+E)",desc:"Detect a cycle in an undirected graph via DFS. A back edge (visited neighbour ≠ parent) signals a cycle.",type:"cycle_u",
+    code:["<span class='kw'>function</span> <span class='fn'>hasCycle</span>(graph, n):","  visited = Set()","  <span class='kw'>function</span> <span class='fn'>dfs</span>(node, parent):","    visited.add(node)","    <span class='kw'>for</span> nb in graph[node]:","      <span class='kw'>if</span> nb not in visited:","        <span class='kw'>if</span> dfs(nb, node): <span class='kw'>return true</span>","      <span class='kw'>else if</span> nb != parent:","        <span class='kw'>return true</span>  <span class='cm'>// back edge!</span>","    <span class='kw'>return false</span>","  <span class='kw'>for</span> i = 0 to n-1:","    <span class='kw'>if</span> i not in visited:","      <span class='kw'>if</span> dfs(i, -1): <span class='kw'>return true</span>","  <span class='kw'>return false</span>"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V) stack<br><b>Back edge:</b> visited & ≠ parent",
+    cases:["Self-loop (u,u) → immediately triggers back-edge condition","Single node, no edges → no cycle","Tree (n-1 edges) → no cycle, every edge is a tree edge","Adding one edge to a tree → always creates exactly one cycle","Disconnected graph → DFS restarts from each unvisited component"]},
+  cycle_directed:{name:"Cycle — Directed",cat:"Graph",subcat:"Cycles",badge:"O(V+E)",desc:"Detect a cycle in a directed graph using 3-colour DFS. A grey→grey back edge confirms a cycle.",type:"cycle_d",
+    code:["<span class='cm'>// 0=WHITE 1=GRAY 2=BLACK</span>","<span class='kw'>function</span> <span class='fn'>hasCycle</span>(graph, n):","  color = Array(n).fill(<span class='num'>0</span>)","  <span class='kw'>function</span> <span class='fn'>dfs</span>(u):","    color[u] = <span class='num'>1</span>  <span class='cm'>// GRAY: in stack</span>","    <span class='kw'>for</span> v in graph[u]:","      <span class='kw'>if</span> color[v] == <span class='num'>1</span>:","        <span class='kw'>return true</span>  <span class='cm'>// back edge!</span>","      <span class='kw'>if</span> color[v] == <span class='num'>0</span>:","        <span class='kw'>if</span> dfs(v): <span class='kw'>return true</span>","    color[u] = <span class='num'>2</span>  <span class='cm'>// BLACK: done</span>","    <span class='kw'>return false</span>","  <span class='kw'>for</span> i = 0 to n-1:","    <span class='kw'>if</span> color[i]==<span class='num'>0</span> and dfs(i): <span class='kw'>return true</span>","  <span class='kw'>return false</span>"],
+    info:"<b>Time:</b> O(V+E)<br><b>Space:</b> O(V)<br><b>Gray node:</b> currently on recursion stack",
+    cases:["Undirected graph — use the undirected variant instead","Single node self-loop → cycle detected immediately","DAG (no cycle) → all nodes finish BLACK, returns false","Back edge only (not cross/forward) indicates a cycle in directed graph","Disconnected → DFS restarts from every WHITE node"]},
+  bst:{name:"BST Operations",cat:"Tree",badge:"O(log n)",desc:"Binary Search Tree: insert, search and delete with animated tree updates.",type:"tree",
+    code:["<span class='kw'>function</span> <span class='fn'>insert</span>(node, val):","  <span class='kw'>if</span> !node: <span class='kw'>return</span> Node(val)","  <span class='kw'>if</span> val < node.val: node.left=insert(node.left,val)","  <span class='kw'>else if</span> val > node.val: node.right=insert(node.right,val)","  <span class='kw'>return</span> node","","<span class='kw'>function</span> <span class='fn'>search</span>(node, val):","  <span class='kw'>if</span> !node: <span class='kw'>return false</span>","  <span class='kw'>if</span> val==node.val: <span class='kw'>return true</span>","  <span class='kw'>if</span> val<node.val: <span class='kw'>return</span> search(node.left,val)","  <span class='kw'>return</span> search(node.right,val)"],
+    info:"<b>Insert/Search:</b> O(log n) avg<br><b>Worst (skewed):</b> O(n)<br><b>Space:</b> O(n)",
+    cases:["Inserting duplicate → ignored (strict BST invariant)","Sorted insertion → creates skewed tree, O(n) height","Delete node with two children → replaced by inorder successor","Cannot delete last node — tree must stay non-empty","Searching empty tree → returns false immediately"]},
+  tree_trav:{name:"Tree Traversals",cat:"Tree",badge:"O(n)",desc:"Inorder (L-Root-R), Preorder (Root-L-R), Postorder (L-R-Root) with step animation.",type:"tree_trav",
+    code:["<span class='kw'>function</span> <span class='fn'>inorder</span>(node):","  inorder(node.left)","  visit(node)   <span class='cm'>// Root</span>","  inorder(node.right)","","<span class='kw'>function</span> <span class='fn'>preorder</span>(node):","  visit(node)   <span class='cm'>// Root first</span>","  preorder(node.left)","  preorder(node.right)","","<span class='kw'>function</span> <span class='fn'>postorder</span>(node):","  postorder(node.left)","  postorder(node.right)","  visit(node)   <span class='cm'>// Root last</span>"],
+    info:"<b>Inorder BST:</b> sorted output<br><b>Preorder:</b> serialize tree<br><b>Postorder:</b> delete tree",
+    cases:["Empty tree → all traversals return empty list","Single node → all three return [root]","Inorder on BST → always sorted ascending","Skewed tree → recursion depth = n (stack risk)","Postorder used in expression trees: leaves before operators"]},
+  fib:{name:"Fibonacci DP",cat:"Dynamic Programming",badge:"O(n)",desc:"Bottom-up DP table for Fibonacci showing optimal substructure.",type:"dp_fib",
+    code:["<span class='kw'>function</span> <span class='fn'>fibonacci</span>(n):","  dp=array of size n+1","  dp[0]=0; dp[1]=1","  <span class='kw'>for</span> i=2 to n:","    dp[i]=dp[i-1]+dp[i-2]","    <span class='cm'>// each cell = sum of prev two</span>","  <span class='kw'>return</span> dp[n]"],
+    info:"<b>Time:</b> O(n)<br><b>Space:</b> O(n) → O(1) optimized<br><b>Naive:</b> O(2ⁿ)",
+    cases:["n=0 → dp[0]=0 (base case)","n=1 → dp[1]=1 (base case)","n>70 → overflows 64-bit int (use BigInt)","Only dp[i-1] and dp[i-2] needed → space reducible to O(1)"]},
+  knapsack:{name:"0/1 Knapsack",cat:"Dynamic Programming",badge:"O(nW)",desc:"Maximize value within weight capacity. Classic 2D DP table.",type:"dp_ks",
+    code:["<span class='kw'>function</span> <span class='fn'>knapsack</span>(W,wt,val,n):","  dp[n+1][W+1]=0","  <span class='kw'>for</span> i=1 to n:","    <span class='kw'>for</span> w=0 to W:","      <span class='kw'>if</span> wt[i]<=w:","        dp[i][w]=max(val[i]+dp[i-1][w-wt[i]], dp[i-1][w])","      <span class='kw'>else</span>: dp[i][w]=dp[i-1][w]","  <span class='kw'>return</span> dp[n][W]"],
+    info:"<b>Time:</b> O(n·W)<br><b>Space:</b> O(n·W)<br><b>0/1:</b> Items cannot be split",
+    cases:["W=0 → all dp values are 0, nothing fits","Item weight > W → that item is never selected","Fractional items needed → use Greedy Fractional Knapsack","Large W with small n → still tractable (pseudo-polynomial)"]},
+  lcs:{name:"Longest Common Subseq.",cat:"Dynamic Programming",badge:"O(mn)",desc:"Longest subsequence present in both strings. Classic 2D DP.",type:"dp_lcs",
+    code:["<span class='kw'>function</span> <span class='fn'>LCS</span>(s1,s2):","  dp[m+1][n+1]=0","  <span class='kw'>for</span> i=1 to m:","    <span class='kw'>for</span> j=1 to n:","      <span class='kw'>if</span> s1[i-1]==s2[j-1]: dp[i][j]=dp[i-1][j-1]+1","      <span class='kw'>else</span>: dp[i][j]=max(dp[i-1][j],dp[i][j-1])","  <span class='kw'>return</span> dp[m][n]"],
+    info:"<b>Time:</b> O(m·n)<br><b>Space:</b> O(m·n)<br><b>Use:</b> Diff tools, DNA alignment",
+    cases:["One empty string → LCS=0 (border cells stay 0)","Identical strings → LCS = full length","LCS ≠ substring — chars need not be contiguous","Multiple LCS of same length → DP finds one; backtrack to list all"]},
+  binexp:{name:"Binary Exponentiation",cat:"Number Theory",badge:"O(log n)",desc:"Compute aⁿ mod m in O(log n) using fast power by squaring.",type:"binexp",
+    code:["<span class='kw'>function</span> <span class='fn'>binExp</span>(a,b,mod):","  result=1; a=a%mod","  <span class='kw'>while</span> b>0:","    <span class='kw'>if</span> b&1: result=result*a%mod","    b=b>>1; a=a*a%mod","  <span class='kw'>return</span> result"],
+    info:"<b>Time:</b> O(log n)<br><b>Space:</b> O(1)<br><b>Use:</b> Modular inverse, cryptography",
+    cases:["b=0 → result=1 (anything to power 0)","a=0 → result=0 for b>0","mod=1 → result always 0","Without mod → intermediate values overflow for large a,b","Negative exponent → not handled; use modular inverse"]},
+  xor:{name:"XOR — Find Unique",cat:"Number Theory",badge:"O(n)",desc:"Find the single element where every other appears twice using XOR self-inverse.",type:"xor",
+    code:["<span class='kw'>function</span> <span class='fn'>findUnique</span>(arr):","  result=0","  <span class='kw'>for</span> x in arr:","    result ^= x","    <span class='cm'>// a^a=0  (pairs cancel)</span>","    <span class='cm'>// a^0=a  (unique stays)</span>","  <span class='kw'>return</span> result"],
+    info:"<b>Time:</b> O(n)<br><b>Space:</b> O(1)<br><b>Key:</b> XOR is self-inverse",
+    cases:["Empty array → stays 0, guard required","All elements appear twice (no unique) → result is 0","Multiple unique elements → technique won't isolate them","Works correctly with negative numbers (two's complement)"]},
+  nim:{name:"Nim Game",cat:"Game Theory",badge:"XOR Strategy",desc:"Remove objects from heaps. Last to take wins. Optimal play via XOR.",type:"nim",
+    code:["<span class='kw'>function</span> <span class='fn'>nimWin</span>(heaps):","  xorSum=0","  <span class='kw'>for</span> h in heaps: xorSum^=h","  <span class='cm'>// xorSum≠0 → current player wins</span>","  <span class='kw'>return</span> xorSum!=0","","<span class='kw'>function</span> <span class='fn'>nimMove</span>(heaps):","  xorSum=XOR of all heaps","  <span class='kw'>for</span> i,h in heaps:","    target=h^xorSum","    <span class='kw'>if</span> target<h: reduce heap[i] to target"],
+    info:"<b>Losing pos:</b> XOR=0<br><b>Winning pos:</b> XOR≠0<br><b>Combine:</b> XOR of heap sizes",
+    cases:["All heaps empty → game already over","Single heap of 1 → current player takes it and wins","XOR of all heaps=0 → first player loses with optimal play","Misère Nim (last-taker loses) → strategy flips only at end-game"]},
+  grundy:{name:"Grundy Numbers",cat:"Game Theory",badge:"Sprague-Grundy",desc:"Compute nimber values for positions. Determines winner of any impartial game.",type:"grundy",
+    code:["<span class='kw'>function</span> <span class='fn'>grundy</span>(n):","  G=array, G[0]=0","  <span class='kw'>for</span> i=1 to n:","    reachable=Set()","    <span class='kw'>for</span> move in getMoves(i):","      reachable.add(G[i-move])","    G[i]=mex(reachable)","    <span class='cm'>// mex=min excludant</span>","  <span class='kw'>return</span> G","<span class='cm'>// G[i]=0 → losing  G[i]>0 → winning</span>"],
+    info:"<b>Theorem:</b> Any impartial game ≡ Nim heap<br><b>Combine:</b> XOR of Grundy values",
+    cases:["G[0]=0 always (terminal = losing for mover)","Moves={1} → G[n]=n mod 2 (alternating W/L)","Moves={1,2} → G values cycle: 0,1,2,0,1,2,...","Combining games → XOR of individual Grundy values"]},
+};
+
+// ═══════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════
+const CATS=[
+  {key:"Sorting",icon:"⇅"},{key:"Array",icon:"▣"},{key:"Pathfinding",icon:"◎"},
+  {key:"Graph",icon:"⬡",subcats:["Graph Traversal","Cycles"]},{key:"Tree",icon:"⌥"},
+  {key:"Dynamic Programming",icon:"◈"},{key:"Number Theory",icon:"#"},{key:"Game Theory",icon:"♟"},
+];
+
+function buildSidebar(){
+  const icons=document.getElementById('sb-icons');
+  const list=document.getElementById('sb-list');
+  CATS.forEach(cat=>{
+    const allItems=Object.entries(ALGOS).filter(([,a])=>a.cat===cat.key);
+    if(!allItems.length) return;
+    const pill=document.createElement('div');
+    pill.className='cat-icon-pill';pill.title=cat.key;pill.textContent=cat.icon;
+    icons.appendChild(pill);
+    const ch=document.createElement('div');ch.className='cat-header';
+    ch.innerHTML=`${cat.icon} ${cat.key}`;list.appendChild(ch);
+    if(cat.subcats){
+      cat.subcats.forEach(subcat=>{
+        const subitems=Object.entries(ALGOS).filter(([,a])=>a.cat===cat.key&&a.subcat===subcat);
+        if(!subitems.length) return;
+        const sh=document.createElement('div');sh.className='subcat-header';sh.textContent=subcat;list.appendChild(sh);
+        subitems.forEach(([id,a])=>{
+          const el=document.createElement('div');el.className='algo-item subcat-item';el.id='si-'+id;
+          el.innerHTML=`<div class="dot"></div>${a.name}`;
+          el.onclick=()=>loadAlgo(id);list.appendChild(el);
+        });
+      });
+    } else {
+      allItems.forEach(([id,a])=>{
+        const el=document.createElement('div');el.className='algo-item';el.id='si-'+id;
+        el.innerHTML=`<div class="dot"></div>${a.name}`;
+        el.onclick=()=>loadAlgo(id);list.appendChild(el);
+      });
+    }
+    const div=document.createElement('div');div.className='cat-divider';list.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let state={
+  current:null,running:false,paused:false,speed:5,timer:null,
+  steps:[],stepIdx:0,renderFn:null,arena:false,
+  arr:[],states:[],
+  grid:null,gridRows:16,gridCols:22,startCell:null,endCell:null,drawingWalls:false,gridMode:'wall',
+  extra:{}
+};
+let _lastExplain='';
+
+// ═══════════════════════════════════════════
+// LOAD ALGO
+// ═══════════════════════════════════════════
+function loadAlgo(id){
+  if(state.timer){clearTimeout(state.timer);state.timer=null;}
+  state.running=false;state.arena=false;state.steps=[];state.stepIdx=0;
+  state.current=id;
+  document.querySelectorAll('.algo-item').forEach(e=>e.classList.remove('active'));
+  const si=document.getElementById('si-'+id);if(si)si.classList.add('active');
+  document.querySelectorAll('.cat-icon-pill').forEach(p=>p.classList.toggle('has-active',p.title===ALGOS[id].cat));
+  document.getElementById('welcome').style.display='none';
+  const av=document.getElementById('algo-view');av.style.display='flex';
+  const a=ALGOS[id];
+  document.getElementById('av-title').textContent=a.name;
+  document.getElementById('av-badge').textContent=a.badge;
+  document.getElementById('av-desc').textContent=a.desc;
+  document.getElementById('av-code').innerHTML=a.code.map((l,i)=>`<div class="code-line" id="cl${i}">${l||'&nbsp;'}</div>`).join('');
+  document.getElementById('av-info').innerHTML=a.info;
+  // Edge cases
+  const ep=document.getElementById('av-edges');
+  if(a.cases&&a.cases.length){
+    ep.style.display='block';
+    ep.innerHTML='<div class="edge-title">⚠ Edge Cases</div>'+a.cases.map(c=>`<div class="edge-case">${c}</div>`).join('');
+  } else ep.style.display='none';
+  closeInputPanel();
+  _lastExplain='';
+  buildControls(id,a);
+  buildViz(id,a);
+}
+
+function highlightCode(lines){
+  document.querySelectorAll('.code-line').forEach(e=>e.classList.remove('highlight'));
+  if(lines)lines.forEach(i=>{const el=document.getElementById('cl'+i);if(el)el.classList.add('highlight');});
+}
+
+// ═══════════════════════════════════════════
+// INPUT PANEL
+// ═══════════════════════════════════════════
+function closeInputPanel(){
+  const p=document.getElementById('input-panel');
+  p.classList.remove('open');p.style.display='none';
+  clearInputError();
+  const b=document.getElementById('btn-input');if(b)b.classList.remove('active');
+}
+function toggleInputPanel(id){
+  const p=document.getElementById('input-panel');
+  const b=document.getElementById('btn-input');
+  if(p.classList.contains('open')){closeInputPanel();return;}
+  p.style.display='flex';p.classList.add('open');
+  if(b)b.classList.add('active');
+  buildInputPanel(id);
+}
+function showInputError(msg){const e=document.getElementById('input-error');e.textContent=msg;e.style.display='block';}
+function clearInputError(){const e=document.getElementById('input-error');if(e){e.textContent='';e.style.display='none';}}
+function parseInts(str){return str.split(',').map(s=>parseInt(s.trim(),10)).filter(n=>!isNaN(n));}
+function addField(inner,lbl,id,ph,w,hint){
+  const g=document.createElement('div');g.className='field-group';
+  const l=document.createElement('label');l.textContent=lbl;l.setAttribute('for',id);
+  const inp=document.createElement('input');inp.type='text';inp.id=id;inp.placeholder=ph;if(w)inp.style.width=w;
+  g.appendChild(l);g.appendChild(inp);
+  if(hint){const h=document.createElement('span');h.className='hint';h.textContent=hint;g.appendChild(h);}
+  inner.appendChild(g);
+}
+function addApply(inner,fn){const b=document.createElement('button');b.className='apply-btn';b.textContent='✓ Apply';b.onclick=fn;inner.appendChild(b);}
+
+function buildInputPanel(id){
+  const a=ALGOS[id];
+  const inner=document.getElementById('input-panel-inner');
+  inner.innerHTML='';clearInputError();
+  if(a.type==='sort'){
+    addField(inner,'Array:','ci-arr','34,12,67,5,2,89,41','230px','comma-separated integers (max 60)');
+    addApply(inner,()=>{
+      const arr=parseInts(document.getElementById('ci-arr').value);
+      if(arr.length<2){showInputError('Need at least 2 integers.');return;}
+      if(arr.length>60){showInputError('Max 60 elements.');return;}
+      clearInputError();
+      state.arr=[...arr];state.states=arr.map(()=>({color:COLORS.default}));
+      state.steps=genSortSteps(id,[...arr]);state.stepIdx=0;
+      renderSort(state.arr,state.states);setStatus(`Loaded ${arr.length} elements`);
+    });
+  } else if(a.type==='array_sw'){
+    addField(inner,'Array:','ci-arr','10,20,5,15,30,25','200px','integers comma-separated');
+    addField(inner,'k:','ci-k','4','50px','window size');
+    addApply(inner,()=>{
+      const arr=parseInts(document.getElementById('ci-arr').value);
+      const k=parseInt(document.getElementById('ci-k').value,10);
+      if(arr.length<2){showInputError('Need at least 2 integers.');return;}
+      if(isNaN(k)||k<1){showInputError('k must be ≥ 1');return;}
+      if(k>arr.length){showInputError(`k(${k}) must be ≤ array length(${arr.length})`);return;}
+      clearInputError();
+      // Load custom data — flag so initArraySW won't overwrite with random
+      state.arr=arr;
+      state.extra._customSW=true;
+      // Sync k control so initArraySW picks it up
+      const kEl=document.getElementById('ctrl-sw-k');if(kEl)kEl.value=k;
+      // Full reinit: clears steps, renders fresh, ready for Start
+      state.running=false;clearTimeout(state.timer);state.steps=[];state.stepIdx=0;
+      state.arena=false;
+      const bA=document.getElementById('btn-arena');if(bA){bA.classList.remove('active');bA.textContent='🎮 Arena';}
+      initArraySW();
+      setStatus(`Loaded: n=${arr.length}, k=${k} — click ▶ Start`);
+    });
+  } else if(a.type==='array_tp'){
+    addField(inner,'Sorted Array:','ci-arr','1,4,6,8,11,15','180px','will auto-sort');
+    addField(inner,'Target:','ci-target','15','65px');
+    addApply(inner,()=>{
+      let arr=parseInts(document.getElementById('ci-arr').value);
+      const target=parseInt(document.getElementById('ci-target').value,10);
+      if(arr.length<2){showInputError('Need at least 2 integers.');return;}
+      if(isNaN(target)){showInputError('Enter a valid target.');return;}
+      arr=arr.sort((a,b)=>a-b);
+      clearInputError();
+      // Load custom data — flags prevent random overwrite on init
+      state.arr=arr;
+      state.extra._customTP=true;
+      state.extra._customTarget=target;
+      // Sync target control
+      const tEl=document.getElementById('ctrl-tp-target');if(tEl)tEl.value=target;
+      // Full reinit
+      state.running=false;clearTimeout(state.timer);state.steps=[];state.stepIdx=0;
+      state.arena=false;
+      const bA=document.getElementById('btn-arena');if(bA){bA.classList.remove('active');bA.textContent='🎮 Arena';}
+      initArrayTP();
+      setStatus(`Loaded: [${arr.join(',')}] | Target=${target} — click ▶ Start`);
+    });
+  } else if(a.type==='array_kadane'){
+    addField(inner,'Array:','ci-karr','-2,1,-3,4,-1,2,1,-5,4','240px','integers (mix pos & neg, max 30)');
+    addApply(inner,()=>{
+      const arr=parseInts(document.getElementById('ci-karr').value);
+      if(arr.length<2){showInputError('Need at least 2 integers.');return;}
+      if(arr.length>30){showInputError('Max 30 elements.');return;}
+      clearInputError();
+      state.arr=arr;state.extra._customKadane=true;
+      state.running=false;clearTimeout(state.timer);state.steps=[];state.stepIdx=0;state.arena=false;
+      const bA=document.getElementById('btn-arena');if(bA){bA.classList.remove('active');bA.textContent='🎮 Arena';}
+      initKadane();
+      setStatus(`Loaded: ${arr.length} elements — click ▶ Start`);
+    });
+  } else if(a.type==='array_bm'){
+    addField(inner,'Array:','ci-bmarr','3,3,4,2,3,1,3,3,2','230px','must have a majority (>n/2 times)');
+    addApply(inner,()=>{
+      const arr=parseInts(document.getElementById('ci-bmarr').value);
+      if(arr.length<1){showInputError('Need at least 1 integer.');return;}
+      const freq={};arr.forEach(v=>{freq[v]=(freq[v]||0)+1;});
+      const majority=Object.entries(freq).find(([,c])=>c>arr.length/2);
+      if(!majority){showInputError('No majority element found — one value must appear more than n/2 times.');return;}
+      clearInputError();
+      state.arr=arr;state.extra._customBM=true;
+      state.running=false;clearTimeout(state.timer);state.steps=[];state.stepIdx=0;state.arena=false;
+      const bA=document.getElementById('btn-arena');if(bA){bA.classList.remove('active');bA.textContent='🎮 Arena';}
+      initBoyerMoore();
+      setStatus(`Loaded: ${arr.length} elements — click ▶ Start`);
+    });
+  } else if(a.type==='grid'){
+    addField(inner,'Rows:','ci-rows','16','55px','6–28');
+    addField(inner,'Cols:','ci-cols','22','55px','8–36');
+    addApply(inner,()=>{
+      const r=Math.min(28,Math.max(6,parseInt(document.getElementById('ci-rows').value,10)||16));
+      const c=Math.min(36,Math.max(8,parseInt(document.getElementById('ci-cols').value,10)||22));
+      state.gridRows=r;state.gridCols=c;
+      clearInputError();initGrid(id);setStatus(`Grid ${r}×${c}`);
+    });
+  } else if(a.type==='graph'||a.type==='dsu'||a.type==='cycle_u'||a.type==='cycle_d'){
+    addField(inner,'Nodes:','ci-nodes','8','55px','2–12');
+    addField(inner,'Edges:','ci-edges','0-1,1-2,2-3','210px','e.g. 0-1,1-2,2-4');
+    addApply(inner,()=>{
+      const n=parseInt(document.getElementById('ci-nodes').value,10);
+      if(isNaN(n)||n<2||n>12){showInputError('Node count must be 2–12.');return;}
+      const edgePairs=document.getElementById('ci-edges').value.split(',').map(s=>{const p=s.trim().split('-').map(Number);return p.length===2&&!isNaN(p[0])&&!isNaN(p[1])?p:null;}).filter(Boolean);
+      if(edgePairs.some(([a,b])=>a>=n||b>=n)){showInputError('Edge index out of range.');return;}
+      clearInputError();
+      const algo=ALGOS[id].algo||'bfs';
+      const cx=350,cy=190,rx=190,ry=135;
+      const nodes=Array.from({length:n},(_,i)=>({id:i,x:cx+Math.cos(i/n*2*Math.PI-Math.PI/2)*rx,y:cy+Math.sin(i/n*2*Math.PI-Math.PI/2)*ry,label:algo==='topo'?String.fromCharCode(65+i):i}));
+      if(algo==='topo'){
+        const layers=Array.from({length:n},(_,i)=>[i]);
+        nodes.forEach((nd,i)=>{nd.x=80+(i+1)*(580/(n+1));nd.y=100+Math.floor(i*55/n)*2;});
+      }
+      state.extra.graphNodes=nodes;state.extra.graphEdges=edgePairs;state.extra.graphAlgo=algo;
+      state.steps=[];state.stepIdx=0;
+      if(a.type==='cycle_u'){genCycleUSteps();renderCycleU({color:Array(n).fill(0),current:-1,parent:{},backEdge:null,done:false,hasCycle:false});}
+      else if(a.type==='cycle_d'){genCycleDSteps();renderCycleD({color:Array(n).fill(0),current:-1,backEdge:null,done:false,hasCycle:false});}
+      else{renderGraph([],[],null,[]);}
+      setStatus(`${n} nodes, ${edgePairs.length} edges`);
+    });
+  } else if(a.type==='tree'||a.type==='tree_trav'){
+    addField(inner,'Values:','ci-vals','50,30,70,20,40,60,80','240px','comma-separated (max 20)');
+    addApply(inner,()=>{
+      const vals=parseInts(document.getElementById('ci-vals').value);
+      if(vals.length<1){showInputError('Need at least 1 integer.');return;}
+      if(vals.length>20){showInputError('Max 20 nodes.');return;}
+      clearInputError();
+      state.extra.treeRoot=null;
+      vals.forEach(v=>{state.extra.treeRoot=bstInsertNode(state.extra.treeRoot,v);});
+      renderTree(new Set(),[]);setStatus(`Tree: ${vals.length} nodes`);
+    });
+  } else if(a.type==='dp_fib'){
+    addField(inner,'N:','ci-n','15','60px','1–25');
+    addApply(inner,()=>{
+      const n=parseInt(document.getElementById('ci-n').value,10);
+      if(isNaN(n)||n<1||n>25){showInputError('N must be 1–25.');return;}
+      clearInputError();
+      state.extra.fibN=n;state.extra.fibDP=Array(n+1).fill(null);
+      renderFib([],null);setStatus(`N=${n}`);
+    });
+  } else if(a.type==='dp_ks'){
+    addField(inner,'Capacity W:','ci-ksW','8','55px');
+    addField(inner,'Items (w:v):','ci-ksItems','2:3,3:4,4:5,5:6','190px','weight:value pairs');
+    addApply(inner,()=>{
+      const W=parseInt(document.getElementById('ci-ksW').value,10);
+      if(isNaN(W)||W<1){showInputError('W must be ≥ 1');return;}
+      const items=document.getElementById('ci-ksItems').value.split(',').map(s=>{const p=s.trim().split(':').map(Number);return p.length===2&&!isNaN(p[0])&&!isNaN(p[1])?{w:p[0],v:p[1]}:null;}).filter(Boolean);
+      if(!items.length){showInputError('Format: w1:v1,w2:v2,...');return;}
+      clearInputError();
+      state.extra.ksW=W;state.extra.ksN=items.length;
+      state.extra.ksWts=items.map(i=>i.w);state.extra.ksVals=items.map(i=>i.v);
+      state.extra.ksDP=Array.from({length:items.length+1},()=>Array(W+1).fill(0));
+      renderKS(0,0);setStatus(`${items.length} items W=${W}`);
+    });
+  } else if(a.type==='dp_lcs'){
+    addField(inner,'String 1:','ci-s1','ABCBDAB','130px');
+    addField(inner,'String 2:','ci-s2','BDCAB','130px','max 12 chars each');
+    addApply(inner,()=>{
+      const s1=(document.getElementById('ci-s1').value||'').toUpperCase().slice(0,12);
+      const s2=(document.getElementById('ci-s2').value||'').toUpperCase().slice(0,12);
+      if(!s1||!s2){showInputError('Both strings required.');return;}
+      clearInputError();
+      state.extra.lcsS1=s1;state.extra.lcsS2=s2;
+      state.extra.lcsDP=Array.from({length:s1.length+1},()=>Array(s2.length+1).fill(0));
+      renderLCS(0,0);setStatus(`"${s1}" vs "${s2}"`);
+    });
+  } else if(a.type==='binexp'){
+    addField(inner,'a:','ci-bea','2','50px');
+    addField(inner,'b (exp):','ci-beb','10','50px');
+    addField(inner,'mod:','ci-bemod','1000','65px');
+    addApply(inner,()=>{
+      const a=parseInt(document.getElementById('ci-bea').value,10),b=parseInt(document.getElementById('ci-beb').value,10),mod=parseInt(document.getElementById('ci-bemod').value,10);
+      if(isNaN(a)||isNaN(b)||isNaN(mod)||mod<1){showInputError('All fields required, mod ≥ 1.');return;}
+      clearInputError();
+      state.extra.beA=a;state.extra.beB=b;state.extra.beMod=mod;
+      renderBinExp([],null);setStatus(`${a}^${b} mod ${mod}`);
+    });
+  } else if(a.type==='xor'){
+    addField(inner,'Array:','ci-xarr','2,3,2,5,3','200px','one unique element');
+    addApply(inner,()=>{
+      const arr=parseInts(document.getElementById('ci-xarr').value);
+      if(arr.length<1){showInputError('At least one element required.');return;}
+      const freq={};arr.forEach(v=>{freq[v]=(freq[v]||0)+1;});
+      const odds=Object.values(freq).filter(c=>c%2!==0).length;
+      if(odds!==1){showInputError(`Array must have exactly ONE unique element. Found ${odds}.`);return;}
+      clearInputError();
+      state.extra.xorArr=arr;renderXOR([],0,null);setStatus(`${arr.length} elements`);
+    });
+  } else if(a.type==='nim'){
+    addField(inner,'Heap sizes:','ci-heaps','3,5,7','150px','positive integers');
+    addApply(inner,()=>{
+      const heaps=parseInts(document.getElementById('ci-heaps').value).filter(h=>h>0);
+      if(!heaps.length){showInputError('Need at least 1 positive heap.');return;}
+      clearInputError();
+      state.extra.nimHeaps=[...heaps];state.extra.nimHistory=[];
+      renderNim();setStatus(`Heaps: [${heaps}]`);
+    });
+  } else if(a.type==='grundy'){
+    addField(inner,'N:','ci-gn','8','55px','max 15');
+    addField(inner,'Moves:','ci-gmoves','1,2','90px','e.g. 1,2,3');
+    addApply(inner,()=>{
+      const n=parseInt(document.getElementById('ci-gn').value,10);
+      const moves=parseInts(document.getElementById('ci-gmoves').value).filter(m=>m>0);
+      if(isNaN(n)||n<1||n>15){showInputError('N must be 1–15.');return;}
+      if(!moves.length){showInputError('At least one move required.');return;}
+      clearInputError();
+      state.extra.grundyN=n;state.extra.grundyMoves=moves;state.extra.grundyG=Array(n+1).fill(null);
+      renderGrundy([],null);setStatus(`N=${n} moves={${moves}}`);
+    });
+  }
+}
+
+
+// ═══════════════════════════════════════════
+// CONTROLS BUILDER
+// ═══════════════════════════════════════════
+function mkCtrl(html){const d=document.createElement('div');d.className='ctrl-group';d.innerHTML=html;return d;}
+function mkSep(){const d=document.createElement('div');d.className='ctrl-sep';return d;}
+function mkBtn(label,cls,fn,bid){const b=document.createElement('button');b.className='btn '+cls;b.innerHTML=label;b.onclick=fn;if(bid)b.id=bid;return b;}
+function setStatus(s,running=false,err=false){const b=document.getElementById('status-badge');if(!b)return;b.textContent=s;b.className='status-badge'+(running?' running':err?' error':'');}
+function pauseViz(){
+  if(!state.running)return;
+  state.running=false;state.paused=true;clearTimeout(state.timer);setStatus('Paused');
+  const btn=document.getElementById('btn-start');
+  if(btn){btn.dataset.origLabel=btn.innerHTML;btn.innerHTML='▶ Resume';}
+}
+function _restoreStartBtn(){
+  const btn=document.getElementById('btn-start');
+  if(btn&&btn.dataset.origLabel){btn.innerHTML=btn.dataset.origLabel;delete btn.dataset.origLabel;}
+}
+function handleStartBtn(){
+  const a=ALGOS[state.current];if(!a||state.running)return;
+  const resuming=!!(state.paused&&state.steps&&state.steps.length>0&&state.stepIdx<state.steps.length);
+  state.paused=false;_restoreStartBtn();
+  if(a.type==='grid'){startGridViz(state.current,resuming);}
+  else{startViz(resuming);}
+}
+
+// Arena controls — appended to every algo
+function appendArena(ctrl){
+  ctrl.appendChild(mkSep());
+  ctrl.appendChild(mkBtn('🎮 Arena','btn-arena',toggleArena,'btn-arena'));
+  ctrl.appendChild(mkBtn('⏮','btn-step',stepBack));
+  ctrl.appendChild(mkBtn('⏭','btn-step',stepFwd));
+}
+
+function buildControls(id,a){
+  const ctrl=document.getElementById('av-controls');ctrl.innerHTML='';
+  ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Speed</span><input type='range' min='1' max='10' value='${state.speed}' id='ctrl-speed'>`));
+  document.getElementById('ctrl-speed').oninput=e=>{state.speed=+e.target.value;};
+
+  if(a.type==='sort'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Size</span><input type='number' min='5' max='60' value='30' id='ctrl-size' style='width:58px'>`));
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>initSort(id)));
+  } else if(a.type==='array_sw'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>k =</span><input type='number' min='1' max='30' value='4' id='ctrl-sw-k' style='width:52px'>`));
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='array_tp'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Target</span><input type='number' id='ctrl-tp-target' placeholder='auto' style='width:70px'>`));
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ New','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='array_kadane'){
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='array_bm'){
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='grid'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Rows</span><input type='number' min='6' max='28' value='${state.gridRows}' id='ctrl-gr' style='width:48px'>`));
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Cols</span><input type='number' min='8' max='36' value='${state.gridCols}' id='ctrl-gc' style='width:48px'>`));
+    ctrl.appendChild(mkBtn('Apply','btn-secondary',()=>applyGridSize(id)));
+    ctrl.appendChild(mkSep());
+    ctrl.appendChild(mkBtn('✏ Wall','btn-mode active',()=>setGridMode('wall',id),'gm-wall'));
+    ctrl.appendChild(mkBtn('🟢 Start','btn-mode',()=>setGridMode('start',id),'gm-start'));
+    ctrl.appendChild(mkBtn('🔴 End','btn-mode',()=>setGridMode('end',id),'gm-end'));
+    ctrl.appendChild(mkSep());
+    ctrl.appendChild(mkBtn('▶ Visualize','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('Clear','btn-secondary',()=>clearGridWalls(id)));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>initGrid(id)));
+  } else if(a.type==='graph'){
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('↺ New','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='dsu'){
+    ctrl.appendChild(mkBtn('▶ Run Unions','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='tree'){
+    ctrl.appendChild(mkCtrl(`<input type='number' id='ctrl-tval' placeholder='value' style='width:70px'>`));
+    ctrl.appendChild(mkBtn('Insert','btn-primary',()=>treeInsert()));
+    ctrl.appendChild(mkBtn('Search','btn-secondary',()=>treeSearch()));
+    ctrl.appendChild(mkBtn('Delete','btn-danger',()=>treeDelete()));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-secondary',()=>buildViz(id,a)));
+  } else if(a.type==='tree_trav'){
+    ctrl.appendChild(mkCtrl(`<input type='number' id='ctrl-tval' placeholder='value' style='width:70px'>`));
+    ctrl.appendChild(mkBtn('Insert','btn-secondary',()=>treeInsert()));
+    ctrl.appendChild(mkBtn('Delete','btn-danger',()=>treeDelete()));
+    ctrl.appendChild(mkBtn('Inorder','btn-primary',()=>startTraversal('inorder')));
+    ctrl.appendChild(mkBtn('Preorder','btn-secondary',()=>startTraversal('preorder')));
+    ctrl.appendChild(mkBtn('Postorder','btn-secondary',()=>startTraversal('postorder')));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='dp_fib'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>N</span><input type='number' min='2' max='25' value='10' id='ctrl-fibN' style='width:55px'>`));
+    ctrl.appendChild(mkBtn('▶ Run','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='dp_ks'||a.type==='dp_lcs'){
+    ctrl.appendChild(mkBtn('▶ Run','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='binexp'){
+    ctrl.appendChild(mkCtrl(`a=<input type='number' value='2' id='be-a' style='width:48px'> b=<input type='number' value='10' id='be-b' style='width:48px'> mod=<input type='number' value='1000' id='be-mod' style='width:62px'>`));
+    ctrl.appendChild(mkBtn('▶ Run','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='xor'){
+    ctrl.appendChild(mkBtn('▶ Run','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('New','btn-secondary',()=>buildViz(id,a)));
+  } else if(a.type==='nim'){
+    ctrl.appendChild(mkBtn('▶ Play','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('New Game','btn-secondary',()=>buildViz(id,a)));
+  } else if(a.type==='grundy'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>N</span><input type='number' min='3' max='15' value='8' id='ctrl-gN' style='width:55px'>`));
+    ctrl.appendChild(mkBtn('▶ Compute','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  } else if(a.type==='cycle_u'||a.type==='cycle_d'){
+    ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('↺ New','btn-danger',()=>buildViz(id,a)));
+  }
+
+  // Arena (all algos) + Custom Input
+  appendArena(ctrl);
+  ctrl.appendChild(mkSep());
+  ctrl.appendChild(mkBtn('📝 Custom Input','btn-input',()=>toggleInputPanel(id),'btn-input'));
+  ctrl.appendChild(mkCtrl(`<span class='status-badge' id='status-badge'>Ready</span>`));
+}
+
+// ═══════════════════════════════════════════
+// ARENA — Universal Step-Through
+// ═══════════════════════════════════════════
+function toggleArena(){
+  state.arena=!state.arena;
+  const b=document.getElementById('btn-arena');
+  if(state.arena){
+    // Turning ON: freeze auto-play, enter stepping mode
+    state.running=false;clearTimeout(state.timer);
+    if(b){b.classList.add('active');b.textContent='🎮 ON';}
+    const a=ALGOS[state.current];
+    // Ensure steps exist (they should already, but guard for edge cases)
+    if(!state.steps||!state.steps.length) regenSteps(a);
+    setStatus(`Arena — step ${state.stepIdx||0} / ${(state.steps||[]).length}`);
+  } else {
+    // Turning OFF: resume animation from wherever we paused
+    if(b){b.classList.remove('active');b.textContent='🎮 Arena';}
+    const a=ALGOS[state.current];
+    if(a.type==='grid'){
+      resumeGridViz(state.current);
+    } else if(state.steps&&state.steps.length&&state.stepIdx<state.steps.length){
+      startViz(true); // resume=true → keeps stepIdx, no regeneration
+    } else {
+      setStatus('Done ✓');
+    }
+  }
+}
+function stepFwd(){
+  if(!state.steps||!state.steps.length){
+    const a=ALGOS[state.current];regenSteps(a);
+    if(!state.steps||!state.steps.length)return;
+  }
+  if(state.stepIdx>=state.steps.length)return;
+  if(!state.arena){
+    state.arena=true;state.running=false;clearTimeout(state.timer);
+    const b=document.getElementById('btn-arena');if(b){b.classList.add('active');b.textContent='🎮 ON';}
+  }
+  const fr=state.steps[state.stepIdx++];
+  if(state.renderFn)state.renderFn(fr);
+  highlightCode(fr.code||[]);
+  if(fr.explain)updateGraphExplain(fr.explain,fr.pathStr||'');
+  setStatus(`Step ${state.stepIdx} / ${state.steps.length}`);
+}
+function stepBack(){
+  if(!state.steps||state.stepIdx<=0)return;
+  if(!state.arena){
+    state.arena=true;state.running=false;clearTimeout(state.timer);
+    const b=document.getElementById('btn-arena');if(b){b.classList.add('active');b.textContent='🎮 ON';}
+  }
+  state.stepIdx=Math.max(0,state.stepIdx-1);
+  const fr=state.steps[state.stepIdx];
+  if(state.renderFn)state.renderFn(fr);
+  highlightCode(fr.code||[]);
+  if(fr.explain)updateGraphExplain(fr.explain,fr.pathStr||'');
+  setStatus(`Step ${state.stepIdx+1} / ${state.steps.length}`);
+}
+
+// ═══════════════════════════════════════════
+// VIZ ROUTER + CANVAS HELPER
+// ═══════════════════════════════════════════
+function buildViz(id,a){
+  state.running=false;state.paused=false;clearTimeout(state.timer);state.steps=[];state.stepIdx=0;state.arena=false;
+  _restoreStartBtn();
+  // Clear custom-data flags so init functions regenerate random data on reset
+  state.extra={};
+  _lastExplain='';
+  const b=document.getElementById('btn-arena');if(b){b.classList.remove('active');b.textContent='🎮 Arena';}
+  document.getElementById('av-canvas').innerHTML='';
+  if(a.type==='sort')initSort(id);
+  else if(a.type==='array_sw')initArraySW();
+  else if(a.type==='array_tp')initArrayTP();
+  else if(a.type==='array_kadane')initKadane();
+  else if(a.type==='array_bm')initBoyerMoore();
+  else if(a.type==='grid')initGrid(id);
+  else if(a.type==='graph')initGraph(id);
+  else if(a.type==='dsu')initDSU();
+  else if(a.type==='tree'||a.type==='tree_trav')initTree();
+  else if(a.type==='dp_fib')initFib();
+  else if(a.type==='dp_ks')initKnapsack();
+  else if(a.type==='dp_lcs')initLCS();
+  else if(a.type==='binexp')initBinExp();
+  else if(a.type==='xor')initXOR();
+  else if(a.type==='nim')initNim();
+  else if(a.type==='grundy')initGrundy();
+  else if(a.type==='cycle_u')initCycleU();
+  else if(a.type==='cycle_d')initCycleD();
+}
+function getCanvas(w=700,h=340){
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.style.borderRadius='5px';
+  ca.appendChild(cv);return cv;
+}
+
+// ═══════════════════════════════════════════
+// SORT
+// ═══════════════════════════════════════════
+const COLORS={default:'#1e3058',comparing:'#ffc107',swapped:'#ff4081',sorted:'#00e676',pivot:'#ce93d8'};
+
+function initSort(id){
+  const n=Math.min(60,Math.max(5,+(document.getElementById('ctrl-size')||{value:30}).value||30));
+  state.arr=Array.from({length:n},()=>Math.floor(Math.random()*90)+10);
+  state.states=state.arr.map(()=>({color:COLORS.default}));
+  state.steps=genSortSteps(id,[...state.arr]);state.stepIdx=0;
+  state.renderFn=fr=>renderSort(fr.arr,fr.states);
+  renderSort(state.arr,state.states);setStatus('Ready');
+}
+function renderSort(arr,states){
+  const cv=getCanvas(700,320);const ctx=cv.getContext('2d');
+  const n=arr.length,W=cv.width,H=cv.height,pad=14;
+  const bw=Math.max(2,(W-2*pad)/n-2);
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,W,H);
+  const maxV=Math.max(...arr);
+  arr.forEach((v,i)=>{
+    const bh=(v/maxV)*(H-36),x=pad+i*(bw+2),y=H-bh-8;
+    ctx.fillStyle=states[i].color;
+    ctx.beginPath();ctx.roundRect(x,y,bw,bh,2);ctx.fill();
+    if(n<=40&&bw>8){
+      ctx.fillStyle='#fff';ctx.font=`bold ${bw>18?11:9}px Fira Code`;ctx.textAlign='center';
+      if(bh>20)ctx.fillText(v,x+bw/2,y+13);else ctx.fillText(v,x+bw/2,y-4);
+    }
+  });
+}
+function* bubbleSortGen(arr){
+  const n=arr.length;const s=arr.map(()=>({color:COLORS.default}));
+  for(let i=0;i<n;i++){let sw=false;
+    for(let j=0;j<n-i-1;j++){
+      s[j].color=COLORS.comparing;s[j+1].color=COLORS.comparing;
+      yield{arr:[...arr],states:s.map(x=>({...x})),code:[4,5]};
+      if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];sw=true;s[j].color=COLORS.swapped;s[j+1].color=COLORS.swapped;yield{arr:[...arr],states:s.map(x=>({...x})),code:[6,7,8]};}
+      s[j].color=COLORS.default;s[j+1].color=COLORS.default;
+    }
+    s[n-1-i].color=COLORS.sorted;if(!sw)break;
+  }
+  s.forEach(x=>x.color=COLORS.sorted);yield{arr:[...arr],states:s.map(x=>({...x})),code:[]};
+}
+function* mergeSortGen(arr){
+  const s=arr.map(()=>({color:COLORS.default}));
+  function* ms(a,lo,hi){
+    if(lo>=hi)return;const mid=Math.floor((lo+hi)/2);
+    yield* ms(a,lo,mid);yield* ms(a,mid+1,hi);
+    const L=a.slice(lo,mid+1),R=a.slice(mid+1,hi+1);let i=0,j=0,k=lo;
+    while(i<L.length&&j<R.length){s[k].color=COLORS.comparing;if(L[i]<=R[j])a[k++]=L[i++];else a[k++]=R[j++];yield{arr:[...a],states:s.map(x=>({...x})),code:[9,10,11]};s[k-1].color=COLORS.sorted;}
+    while(i<L.length){a[k++]=L[i++];s[k-1].color=COLORS.sorted;yield{arr:[...a],states:s.map(x=>({...x})),code:[12]};}
+    while(j<R.length){a[k++]=R[j++];s[k-1].color=COLORS.sorted;yield{arr:[...a],states:s.map(x=>({...x})),code:[12]};}
+  }
+  yield* ms(arr,0,arr.length-1);
+  s.forEach(x=>x.color=COLORS.sorted);yield{arr:[...arr],states:s.map(x=>({...x})),code:[]};
+}
+function* quickSortGen(arr){
+  const s=arr.map(()=>({color:COLORS.default}));
+  function* qs(a,lo,hi){
+    if(lo>=hi)return;s[hi].color=COLORS.pivot;yield{arr:[...a],states:s.map(x=>({...x})),code:[7]};
+    let i=lo-1;
+    for(let j=lo;j<hi;j++){
+      s[j].color=COLORS.comparing;yield{arr:[...a],states:s.map(x=>({...x})),code:[9]};
+      if(a[j]<=a[hi]){i++;[a[i],a[j]]=[a[j],a[i]];s[i].color=COLORS.swapped;s[j].color=COLORS.swapped;yield{arr:[...a],states:s.map(x=>({...x})),code:[10,11,12]};}
+      if(s[j].color!==COLORS.sorted)s[j].color=COLORS.default;
+      if(s[i]&&s[i].color!==COLORS.sorted)s[i].color=COLORS.default;
+    }
+    [a[i+1],a[hi]]=[a[hi],a[i+1]];s[i+1].color=COLORS.sorted;s[hi].color=COLORS.default;
+    yield{arr:[...a],states:s.map(x=>({...x})),code:[13]};
+    const p=i+1;yield* qs(a,lo,p-1);yield* qs(a,p+1,hi);
+  }
+  yield* qs(arr,0,arr.length-1);
+  s.forEach(x=>x.color=COLORS.sorted);yield{arr:[...arr],states:s.map(x=>({...x})),code:[]};
+}
+function* heapSortGen(arr){
+  const n=arr.length;const s=arr.map(()=>({color:COLORS.default}));
+  function* heapify(a,sz,i){
+    let largest=i,l=2*i+1,r=2*i+2;
+    s[i].color=COLORS.comparing;yield{arr:[...a],states:s.map(x=>({...x})),code:[11]};
+    if(l<sz&&a[l]>a[largest])largest=l;if(r<sz&&a[r]>a[largest])largest=r;
+    if(largest!==i){[a[i],a[largest]]=[a[largest],a[i]];s[i].color=COLORS.swapped;s[largest].color=COLORS.swapped;yield{arr:[...a],states:s.map(x=>({...x})),code:[12,13]};s[i].color=COLORS.default;s[largest].color=COLORS.default;yield* heapify(a,sz,largest);}
+    else s[i].color=COLORS.default;
+  }
+  for(let i=Math.floor(n/2)-1;i>=0;i--)yield* heapify(arr,n,i);
+  for(let i=n-1;i>0;i--){[arr[0],arr[i]]=[arr[i],arr[0]];s[i].color=COLORS.sorted;yield{arr:[...arr],states:s.map(x=>({...x})),code:[5,6]};yield* heapify(arr,i,0);}
+  s[0].color=COLORS.sorted;yield{arr:[...arr],states:s.map(x=>({...x})),code:[]};
+}
+function genSortSteps(id,arr){
+  const gen=id==='bubble'?bubbleSortGen(arr):id==='merge'?mergeSortGen(arr):id==='quick'?quickSortGen(arr):heapSortGen(arr);
+  const steps=[];let r=gen.next();while(!r.done){steps.push(r.value);r=gen.next();}return steps;
+}
+
+// ═══════════════════════════════════════════
+// START VIZ (universal)
+// ═══════════════════════════════════════════
+// resuming=true means coming back from pause/arena; don't reset stepIdx
+function startViz(resuming=false){
+  if(state.running)return;
+  const a=ALGOS[state.current];
+  state.arena=false;
+  const b=document.getElementById('btn-arena');if(b){b.classList.remove('active');b.textContent='🎮 Arena';}
+
+  if(a.type==='dsu'){state.running=true;setStatus('Running',true);runGraphAnim_dsu();return;}
+  if(a.type==='grid'){startGridViz(state.current,resuming);return;}
+  if(a.type==='tree'||a.type==='tree_trav'){setStatus('Use Insert/Traversal buttons');return;}
+
+  // Always regenerate steps on a fresh start (not resume) so custom input takes effect
+  if(!resuming){
+    state.steps=[];state.stepIdx=0;
+    regenSteps(a);
+  } else if(!state.steps||!state.steps.length){
+    regenSteps(a);
+  }
+  if(!state.steps||!state.steps.length){setStatus('Ready');return;}
+
+  state.running=true;setStatus('Running',true);
+  function tick(){
+    if(!state.running||state.stepIdx>=state.steps.length){
+      state.running=false;state.paused=false;setStatus('Done ✓');highlightCode([]);_restoreStartBtn();return;
+    }
+    if(state.arena){state.running=false;return;} // arena grabbed control
+    const fr=state.steps[state.stepIdx++];
+    if(state.renderFn)state.renderFn(fr);
+    highlightCode(fr.code||[]);
+    state.timer=setTimeout(tick,Math.max(15,600-state.speed*55));
+  }
+  tick();
+}
+
+function regenSteps(a){
+  state.stepIdx=0;
+  if(a.type==='sort'){if(state.arr&&state.arr.length){state.steps=genSortSteps(state.current,[...state.arr]);state.renderFn=fr=>renderSort(fr.arr,fr.states);}}
+  else if(a.type==='array_sw')genSWSteps();
+  else if(a.type==='array_tp')genTPSteps();
+  else if(a.type==='array_kadane')genKadaneSteps();
+  else if(a.type==='array_bm')genBoyerMooreSteps();
+  else if(a.type==='graph')genGraphSteps();
+  else if(a.type==='dp_fib')genFibSteps();
+  else if(a.type==='dp_ks')genKSSteps();
+  else if(a.type==='dp_lcs')genLCSSteps();
+  else if(a.type==='binexp')genBinExpSteps();
+  else if(a.type==='xor')genXORSteps();
+  else if(a.type==='nim')genNimSteps();
+  else if(a.type==='grundy')genGrundySteps();
+  else if(a.type==='cycle_u')genCycleUSteps();
+  else if(a.type==='cycle_d')genCycleDSteps();
+}
+
+// ═══════════════════════════════════════════
+// SLIDING WINDOW
+// ═══════════════════════════════════════════
+function initArraySW(){
+  // Read k from control (or default 4)
+  const kEl=document.getElementById('ctrl-sw-k');
+  const k=Math.max(1,+(kEl?kEl.value:4)||4);
+  // Only generate random array if no custom data is loaded
+  if(!state.extra._customSW){
+    const n=18;
+    state.arr=Array.from({length:n},()=>Math.floor(Math.random()*50)+1);
+  }
+  const arr=state.arr;
+  if(k>arr.length){setStatus(`k(${k}) > array size(${arr.length})`,false,true);return;}
+  const initSum=arr.slice(0,k).reduce((a,b)=>a+b,0);
+  state.extra={k,curSum:initSum,maxSum:initSum,maxWin:[0,k-1],_customSW:state.extra._customSW};
+  // Always regenerate steps fresh
+  state.steps=[];state.stepIdx=0;
+  genSWSteps();
+  renderArraySW(0,k-1,0);
+  setStatus('Ready — click ▶ Start');
+}
+function genSWSteps(){
+  const arr=state.arr,k=state.extra.k;
+  if(k>arr.length){setStatus(`k(${k}) > n(${arr.length}) — invalid`,false,true);state.steps=[];return;}
+  const steps=[];
+  let s=arr.slice(0,k).reduce((a,b)=>a+b,0),maxS=s,mw=[0,k-1];
+  state.extra.curSum=s;state.extra.maxSum=maxS;state.extra.maxWin=[...mw];
+  steps.push({winL:0,winR:k-1,curSum:s,maxSum:maxS,maxWin:[...mw],step:0,code:[4,5,6,7]});
+  for(let i=1;i<=arr.length-k;i++){
+    s+=arr[i+k-1]-arr[i-1];if(s>maxS){maxS=s;mw=[i,i+k-1];}
+    steps.push({winL:i,winR:i+k-1,curSum:s,maxSum:maxS,maxWin:[...mw],step:i,code:[5,6,7,8]});
+  }
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>{state.extra.curSum=fr.curSum;state.extra.maxSum=fr.maxSum;state.extra.maxWin=fr.maxWin;renderArraySW(fr.winL,fr.winR,fr.step);};
+}
+function renderArraySW(winL,winR,step){
+  const arr=state.arr,{k,maxSum,curSum,maxWin}=state.extra;
+  const cv=getCanvas(700,250);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+  const bw=28,gap=4,sx=30,baseY=175;
+  arr.forEach((v,i)=>{
+    const x=sx+i*(bw+gap),bh=v*1.6+18;
+    let col='#1e3058';
+    if(i>=winL&&i<=winR&&i>=maxWin[0]&&i<=maxWin[1])col='#00e67633';
+    else if(i>=winL&&i<=winR)col='#00e5ff2a';
+    else if(i>=maxWin[0]&&i<=maxWin[1])col='#ffc1072a';
+    ctx.fillStyle=col;ctx.fillRect(x,baseY-bh,bw,bh);
+    ctx.fillStyle=(i>=winL&&i<=winR)?'#00e5ff':'#7a90b8';
+    ctx.font='bold 11px Fira Code';ctx.textAlign='center';ctx.fillText(v,x+bw/2,baseY-bh-5);
+    ctx.fillStyle='#3a5080';ctx.font='9px Fira Code';ctx.fillText(i,x+bw/2,baseY+13);
+  });
+  const wx1=sx+winL*(bw+gap),wx2=sx+(winR+1)*(bw+gap)-gap;
+  ctx.strokeStyle='#00e5ff';ctx.lineWidth=2;ctx.strokeRect(wx1-2,55,wx2-wx1+4,128);
+  ctx.fillStyle='#00e5ff';ctx.font='11px Fira Code';ctx.textAlign='left';
+  ctx.fillText(`Window [${winL}..${winR}]  sum=${curSum}  k=${k}`,wx1,48);
+  ctx.fillStyle='#ffc107';ctx.font='11px Fira Code';
+  ctx.fillText(`Max Sum = ${maxSum}  @ [${maxWin[0]}..${maxWin[1]}]`,30,212);
+  ctx.fillStyle='#3a5080';ctx.font='10px Fira Code';
+  ctx.fillText(`Step ${step} / ${arr.length-k}`,30,232);
+}
+
+// ═══════════════════════════════════════════
+// TWO POINTER
+// ═══════════════════════════════════════════
+function initArrayTP(){
+  // Only generate random if no custom data loaded
+  if(!state.extra._customTP){
+    const n=16;
+    state.arr=Array.from({length:n},()=>Math.floor(Math.random()*40)+1).sort((a,b)=>a-b);
+  }
+  const arr=state.arr;
+  const tEl=document.getElementById('ctrl-tp-target');
+  let target;
+  if(tEl&&tEl.value.trim()!=='') target=+tEl.value;
+  else if(state.extra._customTarget!=null) target=state.extra._customTarget;
+  else target=arr[Math.floor(arr.length*0.3)]+arr[Math.floor(arr.length*0.7)]+Math.floor(Math.random()*3);
+  const customFlags={_customTP:state.extra._customTP,_customTarget:state.extra._customTarget};
+  state.extra={target,left:0,right:arr.length-1,found:null,...customFlags};
+  state.steps=[];state.stepIdx=0;
+  genTPSteps();
+  renderArrayTP(0,arr.length-1,null,false);
+  setStatus('Ready — click ▶ Start');
+}
+function genTPSteps(){
+  const arr=state.arr,{target}=state.extra;
+  const steps=[];let left=0,right=arr.length-1;
+  while(left<right){
+    const sum=arr[left]+arr[right];
+    if(sum===target){steps.push({left,right,found:[left,right],noSol:false,code:[3,4,5]});state.steps=steps;state.stepIdx=0;
+      state.renderFn=fr=>renderArrayTP(fr.left,fr.right,fr.found,fr.noSol);return;}
+    else if(sum<target){steps.push({left,right,found:null,noSol:false,code:[5,6]});left++;}
+    else{steps.push({left,right,found:null,noSol:false,code:[5,7]});right--;}
+  }
+  steps.push({left,right,found:null,noSol:true,code:[]});
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderArrayTP(fr.left,fr.right,fr.found,fr.noSol);
+}
+function renderArrayTP(left,right,found,noSol){
+  const arr=state.arr,{target}=state.extra;
+  const cv=getCanvas(700,240);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+  const bw=30,gap=4,sx=22,baseY=158;
+  arr.forEach((v,i)=>{
+    const x=sx+i*(bw+gap);
+    let col='#1e3058';
+    if(found&&(i===found[0]||i===found[1]))col='#00e67644';
+    else if(i===left)col='#00e5ff33';
+    else if(i===right)col='#ff408133';
+    ctx.fillStyle=col;ctx.fillRect(x,baseY-v*1.1-8,bw,v*1.1+8);
+    ctx.fillStyle=(i===left)?'#00e5ff':(i===right)?'#ff4081':'#8090b0';
+    ctx.font='bold 11px Fira Code';ctx.textAlign='center';ctx.fillText(v,x+bw/2,baseY-v*1.1-12);
+    ctx.fillStyle='#3a5080';ctx.font='9px Fira Code';ctx.fillText(i,x+bw/2,baseY+13);
+  });
+  if(!found&&!noSol){
+    const lx=sx+left*(bw+gap)+bw/2,rx=sx+right*(bw+gap)+bw/2;
+    ctx.fillStyle='#00e5ff';ctx.font='bold 13px Fira Code';ctx.textAlign='center';ctx.fillText('L',lx,baseY+28);
+    ctx.fillStyle='#ff4081';ctx.fillText('R',rx,baseY+28);
+    const sum=arr[left]+arr[right];
+    ctx.fillStyle=sum===target?'#00e676':sum<target?'#ffc107':'#ff4081';
+    ctx.font='11px Fira Code';ctx.textAlign='left';
+    ctx.fillText(`arr[L]+arr[R] = ${sum}  →  ${sum===target?'== Target ✓':sum<target?'< Target → L++':'> Target → R--'}`,20,205);
+  }
+  ctx.fillStyle='#cdd8f0';ctx.font='11px Fira Code';ctx.textAlign='left';ctx.fillText(`Target = ${target}  |  Sorted array`,20,24);
+  if(found)ctx.fillStyle='#00e676',ctx.font='bold 12px Fira Code',ctx.fillText(`✓ Pair found: [${found[0]}]+[${found[1]}] → ${arr[found[0]]} + ${arr[found[1]]} = ${target}`,20,205);
+  if(noSol){ctx.fillStyle='#ff4081';ctx.font='bold 13px Fira Code';ctx.textAlign='center';ctx.fillText(`✗ No pair sums to ${target} in this array`,350,195);ctx.font='10px Fira Code';ctx.fillStyle='#5a7099';ctx.fillText('Try Custom Input to set a different target',350,215);}
+}
+
+
+// ═══════════════════════════════════════════
+// KADANE'S ALGORITHM
+// ═══════════════════════════════════════════
+function initKadane(){
+  if(!state.extra._customKadane){
+    const n=18;
+    state.arr=Array.from({length:n},()=>Math.floor(Math.random()*21)-7);
+    if(state.arr.every(v=>v<=0))state.arr[Math.floor(n/2)]=12;
+  }
+  genKadaneSteps();
+  renderKadane(state.steps[0]);
+  setStatus('Ready — click ▶ Start');
+}
+function genKadaneSteps(){
+  const arr=state.arr,n=arr.length;const steps=[];
+  let curSum=arr[0],maxSum=arr[0],tempStart=0,maxStart=0,maxEnd=0;
+  steps.push({i:0,curStart:0,curEnd:0,curSum,maxStart,maxEnd,maxSum,done:false,code:[1,2]});
+  for(let i=1;i<n;i++){
+    if(curSum+arr[i]<arr[i]){
+      curSum=arr[i];tempStart=i;
+      steps.push({i,curStart:tempStart,curEnd:i,curSum,maxStart,maxEnd,maxSum,done:false,code:[4,5]});
+    } else {
+      curSum+=arr[i];
+      steps.push({i,curStart:tempStart,curEnd:i,curSum,maxStart,maxEnd,maxSum,done:false,code:[4,6]});
+    }
+    if(curSum>maxSum){maxSum=curSum;maxStart=tempStart;maxEnd=i;}
+    steps.push({i,curStart:tempStart,curEnd:i,curSum,maxStart,maxEnd,maxSum,done:false,code:[7,8,9]});
+  }
+  steps.push({i:n-1,curStart:maxStart,curEnd:maxEnd,curSum,maxStart,maxEnd,maxSum,done:true,code:[10]});
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderKadane(fr);
+}
+function renderKadane(fr){
+  const arr=state.arr;if(!arr||!arr.length)return;
+  const{i,curStart,curEnd,curSum,maxStart,maxEnd,maxSum,done}=fr;
+  const cv=getCanvas(700,310);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+  const n=arr.length,bw=Math.max(18,Math.floor((640-n*3)/n)),gap=3,sx=Math.max(20,(700-(n*(bw+gap)))/2);
+  const maxAbs=Math.max(...arr.map(Math.abs),1);
+  const scale=72/maxAbs;
+  const baseline=155;
+  // Baseline
+  ctx.strokeStyle='#253d6a';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(sx-4,baseline);ctx.lineTo(sx+n*(bw+gap)+4,baseline);ctx.stroke();
+  arr.forEach((v,idx)=>{
+    const x=sx+idx*(bw+gap);
+    const bh=Math.abs(v)*scale||2;
+    const isMax=idx>=maxStart&&idx<=maxEnd;
+    const isCur=idx>=curStart&&idx<=curEnd;
+    const isActive=idx===i&&!done;
+    let col='#1e3058';
+    if(done&&isMax)col='#00e676aa';
+    else if(isActive)col='#ffc107cc';
+    else if(isCur&&isMax)col='rgba(0,230,118,0.35)';
+    else if(isCur)col='rgba(0,229,255,0.28)';
+    else if(isMax)col='rgba(255,193,7,0.18)';
+    ctx.fillStyle=col;
+    v>=0?ctx.fillRect(x,baseline-bh,bw,bh):ctx.fillRect(x,baseline,bw,bh);
+    ctx.fillStyle=isActive?'#ffc107':done&&isMax?'#00e676':isCur?'#00e5ff':'#5a7099';
+    ctx.font=`bold ${bw>=20?10:9}px Fira Code`;ctx.textAlign='center';
+    ctx.fillText(v,x+bw/2,v>=0?baseline-bh-5:baseline+bh+12);
+    ctx.fillStyle='#2a4070';ctx.font='8px Fira Code';
+    ctx.fillText(idx,x+bw/2,baseline+18);
+  });
+  // Active pointer arrow
+  if(!done&&i>=0){
+    const ax=sx+i*(bw+gap)+bw/2;
+    ctx.fillStyle='#ffc107';ctx.font='bold 11px Fira Code';ctx.textAlign='center';
+    ctx.fillText('▲',ax,baseline+28);
+  }
+  // Info
+  if(!done){
+    ctx.fillStyle='#00e5ff';ctx.font='11px Fira Code';ctx.textAlign='left';
+    ctx.fillText(`curSum = ${curSum}   window [${curStart}..${curEnd}]`,28,230);
+    ctx.fillStyle='#00e676';
+    ctx.fillText(`maxSum = ${maxSum}   best window [${maxStart}..${maxEnd}]`,28,248);
+  } else {
+    ctx.fillStyle='#00e676';ctx.font='bold 13px Fira Code';ctx.textAlign='center';
+    ctx.fillText(`✓ Max Subarray = [${maxStart}..${maxEnd}]  →  Sum = ${maxSum}`,350,232);
+    ctx.fillStyle='#5a7099';ctx.font='10px Fira Code';
+    ctx.fillText(`Elements: [ ${arr.slice(maxStart,maxEnd+1).join(', ')} ]`,350,251);
+  }
+  // Legend
+  ctx.textBaseline='top';
+  [['#1e3058','Unvisited'],['#ffc107cc','Current i'],['rgba(0,229,255,0.5)','Cur window'],['rgba(0,230,118,0.6)','Max window']].forEach(([col,lbl],k)=>{
+    ctx.fillStyle=col;ctx.fillRect(20+k*148,277,10,10);
+    ctx.fillStyle='#5a7099';ctx.font='9px Fira Code';ctx.textAlign='left';ctx.fillText(lbl,34+k*148,277);
+  });
+}
+
+// ═══════════════════════════════════════════
+// BOYER-MOORE VOTING ALGORITHM
+// ═══════════════════════════════════════════
+function initBoyerMoore(){
+  if(!state.extra._customBM){
+    const n=17;const majorityVal=Math.floor(Math.random()*4)+1;
+    const majorityCount=Math.floor(n/2)+1;
+    const arr=Array(majorityCount).fill(majorityVal);
+    const others=[1,2,3,4,5].filter(v=>v!==majorityVal);
+    while(arr.length<n)arr.push(others[Math.floor(Math.random()*others.length)]);
+    for(let j=arr.length-1;j>0;j--){const k=Math.floor(Math.random()*(j+1));[arr[j],arr[k]]=[arr[k],arr[j]];}
+    state.arr=arr;
+  }
+  genBoyerMooreSteps();
+  renderBoyerMoore(state.steps[0]);
+  setStatus('Ready — click ▶ Start');
+}
+function genBoyerMooreSteps(){
+  const arr=state.arr,n=arr.length;const steps=[];
+  let candidate=null,count=0;
+  steps.push({phase:1,i:-1,candidate,count,verified:null,code:[1,2]});
+  for(let i=0;i<n;i++){
+    if(count===0){candidate=arr[i];count=1;steps.push({phase:1,i,candidate,count,verified:null,code:[3,4]});}
+    else if(arr[i]===candidate){count++;steps.push({phase:1,i,candidate,count,verified:null,code:[5]});}
+    else{count--;steps.push({phase:1,i,candidate,count,verified:null,code:[6]});}
+  }
+  const votes=arr.filter(x=>x===candidate).length;
+  const isMajority=votes>n/2;
+  steps.push({phase:2,i:-1,candidate,count:votes,verified:isMajority,code:[8,9,isMajority?9:10]});
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderBoyerMoore(fr);
+}
+function renderBoyerMoore(fr){
+  const arr=state.arr;if(!arr||!arr.length)return;
+  const{phase,i,candidate,count,verified}=fr;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;padding-top:14px;font-family:Fira Code;';
+  // Phase tabs
+  const phaseRow=document.createElement('div');phaseRow.style.cssText='display:flex;gap:10px;';
+  ['Phase 1: Find Candidate','Phase 2: Verify'].forEach((lbl,pi)=>{
+    const p=document.createElement('div');const active=pi+1===phase;
+    p.style.cssText=`padding:4px 16px;border-radius:20px;font-size:10px;border:1px solid ${active?'rgba(0,229,255,.4)':'#1e3058'};background:${active?'rgba(0,229,255,.1)':'transparent'};color:${active?'#00e5ff':'#5a7099'};letter-spacing:.5px;`;
+    p.textContent=lbl;phaseRow.appendChild(p);
+  });
+  wrap.appendChild(phaseRow);
+  // Tiles
+  const tilesRow=document.createElement('div');tilesRow.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:center;';
+  arr.forEach((v,idx)=>{
+    const tile=document.createElement('div');
+    let bg='#0d1526',border='#1e3058',col='#5a7099';
+    if(verified!==null){
+      if(v===candidate){bg=verified?'rgba(0,230,118,.15)':'rgba(255,64,129,.1)';border=verified?'#00e676':'#ff4081';col=verified?'#00e676':'#ff4081';}
+    } else if(idx===i&&phase===1){bg='rgba(255,193,7,.2)';border='#ffc107';col='#ffc107';}
+    else if(idx<i&&phase===1){bg='rgba(13,21,38,.6)';border='#172640';col='#3a5580';}
+    tile.style.cssText=`width:42px;height:42px;background:${bg};border:1px solid ${border};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:${col};position:relative;transition:all .18s;`;
+    tile.textContent=v;
+    if(idx===i&&phase===1){const dot=document.createElement('div');dot.style.cssText='position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:5px;height:5px;background:#ffc107;border-radius:50%;';tile.appendChild(dot);}
+    tilesRow.appendChild(tile);
+  });
+  wrap.appendChild(tilesRow);
+  // Candidate + Count panel
+  if(phase===1&&i>=0){
+    const infoRow=document.createElement('div');infoRow.style.cssText='display:flex;gap:32px;align-items:center;justify-content:center;margin-top:4px;';
+    // Candidate box
+    const candBox=document.createElement('div');candBox.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;';
+    const cLbl=document.createElement('div');cLbl.style.cssText='font-size:9px;color:#5a7099;letter-spacing:2px;text-transform:uppercase;';cLbl.textContent='Candidate';
+    const cVal=document.createElement('div');cVal.style.cssText='font-size:40px;font-weight:700;color:#00e5ff;';cVal.textContent=candidate??'—';
+    candBox.appendChild(cLbl);candBox.appendChild(cVal);
+    // Count box
+    const cntBox=document.createElement('div');cntBox.style.cssText='display:flex;flex-direction:column;align-items:center;gap:4px;';
+    const ctLbl=document.createElement('div');ctLbl.style.cssText='font-size:9px;color:#5a7099;letter-spacing:2px;text-transform:uppercase;';ctLbl.textContent='Net Count';
+    const ctVal=document.createElement('div');ctVal.style.cssText=`font-size:40px;font-weight:700;color:${count>0?'#00e676':'#ff4081'};`;ctVal.textContent=count;
+    cntBox.appendChild(ctLbl);cntBox.appendChild(ctVal);
+    // Vote meter
+    const meterBox=document.createElement('div');meterBox.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;';
+    const mLbl=document.createElement('div');mLbl.style.cssText='font-size:9px;color:#5a7099;letter-spacing:2px;text-transform:uppercase;';mLbl.textContent='Vote Meter';
+    const mOuter=document.createElement('div');mOuter.style.cssText='width:130px;height:12px;background:#0d1526;border:1px solid #1e3058;border-radius:3px;overflow:hidden;';
+    const maxPossible=Math.ceil(arr.length/2)+1;
+    const pct=Math.min(100,Math.max(0,count/maxPossible*100));
+    const mInner=document.createElement('div');mInner.style.cssText=`height:100%;width:${pct}%;background:${count>0?'#00e676':'#ff4081'};border-radius:2px;transition:width .25s;`;
+    mOuter.appendChild(mInner);meterBox.appendChild(mLbl);meterBox.appendChild(mOuter);
+    infoRow.appendChild(candBox);infoRow.appendChild(cntBox);infoRow.appendChild(meterBox);
+    wrap.appendChild(infoRow);
+    // Hint text
+    const hint=document.createElement('div');hint.style.cssText='font-size:10px;color:#5a7099;text-align:center;';
+    const cur=arr[i];
+    if(count===1&&candidate===cur)hint.textContent=`count was 0 → new candidate = ${cur}, count = 1`;
+    else if(cur===candidate)hint.textContent=`arr[${i}] = ${cur} matches candidate → count++`;
+    else hint.textContent=`arr[${i}] = ${cur} ≠ candidate (${candidate}) → count--`;
+    wrap.appendChild(hint);
+  } else if(phase===2){
+    const votes=arr.filter(x=>x===candidate).length;
+    const result=document.createElement('div');result.style.cssText='text-align:center;';
+    const big=document.createElement('div');big.style.cssText=`font-size:15px;font-weight:700;color:${verified?'#00e676':'#ff4081'};`;
+    if(verified)big.innerHTML=`✓ Majority Element = <span style="color:#ffc107;font-size:24px">${candidate}</span>  (appears ${votes} / ${arr.length} times)`;
+    else big.innerHTML=`✗ No majority — candidate <span style="color:#ffc107">${candidate}</span> appears only ${votes} / ${arr.length} times (need > ${Math.floor(arr.length/2)})`;
+    result.appendChild(big);wrap.appendChild(result);
+  }
+  ca.appendChild(wrap);
+}
+function applyGridSize(id){
+  const r=Math.min(28,Math.max(6,+(document.getElementById('ctrl-gr')||{value:16}).value||16));
+  const c=Math.min(36,Math.max(8,+(document.getElementById('ctrl-gc')||{value:22}).value||22));
+  state.gridRows=r;state.gridCols=c;initGrid(id);
+}
+function setGridMode(mode,id){
+  state.gridMode=mode;
+  ['wall','start','end'].forEach(m=>{const b=document.getElementById('gm-'+m);if(b)b.className='btn btn-mode'+(m===mode?' active':'');});
+}
+function initGrid(id){
+  const R=state.gridRows,C=state.gridCols;
+  state.grid=Array.from({length:R},(_,r)=>Array.from({length:C},(_,c)=>({wall:false,visited:false,path:false,frontier:false,r,c,dist:Infinity,prev:null})));
+  state.startCell={r:2,c:2};state.endCell={r:R-3,c:C-3};
+  state.extra.weights=Array.from({length:R},()=>Array.from({length:C},()=>Math.floor(Math.random()*4)+1));
+  state.steps=[];state.stepIdx=0;state.gridMode='wall';
+  renderGrid(id);setStatus('Click=wall | 🟢Start | 🔴End → then Visualize');
+}
+function renderGrid(id){
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const R=state.gridRows,C=state.gridCols;
+  const gc=document.createElement('div');gc.className='grid-container';
+  gc.style.gridTemplateColumns=`repeat(${C},22px)`;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const cell=document.createElement('div');cell.className='grid-cell';cell.id=`gc-${r}-${c}`;
+    updateCellClass(cell,r,c);
+    cell.onmousedown=()=>{state.drawingWalls=true;handleGridClick(r,c,id);};
+    cell.onmouseover=()=>{if(state.drawingWalls&&state.gridMode==='wall')toggleWall(r,c,id);};
+    cell.onmouseup=()=>{state.drawingWalls=false;};
+    gc.appendChild(cell);
+  }
+  document.onmouseup=()=>state.drawingWalls=false;
+  ca.appendChild(gc);
+}
+function handleGridClick(r,c,id){
+  const m=state.gridMode;
+  if(m==='start'){
+    state.startCell={r,c};
+    document.querySelectorAll('.grid-cell').forEach(el=>el.classList.remove('start'));
+    const el=document.getElementById(`gc-${r}-${c}`);if(el)updateCellClass(el,r,c);
+    setGridMode('wall',id);setStatus(`Start set at (${r},${c})`);
+  } else if(m==='end'){
+    state.endCell={r,c};
+    document.querySelectorAll('.grid-cell').forEach(el=>el.classList.remove('end'));
+    const el=document.getElementById(`gc-${r}-${c}`);if(el)updateCellClass(el,r,c);
+    setGridMode('wall',id);setStatus(`End set at (${r},${c})`);
+  } else toggleWall(r,c,id);
+}
+function toggleWall(r,c,id){
+  const s=state.startCell,e=state.endCell;
+  if(s&&r===s.r&&c===s.c)return;if(e&&r===e.r&&c===e.c)return;
+  state.grid[r][c].wall=!state.grid[r][c].wall;
+  const el=document.getElementById(`gc-${r}-${c}`);if(el)updateCellClass(el,r,c);
+}
+function updateCellClass(el,r,c){
+  const{startCell,endCell,grid}=state;el.className='grid-cell';
+  if(startCell&&r===startCell.r&&c===startCell.c)el.classList.add('start');
+  else if(endCell&&r===endCell.r&&c===endCell.c)el.classList.add('end');
+  else if(grid[r][c].path)el.classList.add('path');
+  else if(grid[r][c].visited)el.classList.add('visited');
+  else if(grid[r][c].frontier)el.classList.add('frontier');
+  else if(grid[r][c].wall)el.classList.add('wall');
+}
+function clearGridWalls(id){
+  const R=state.gridRows,C=state.gridCols;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)Object.assign(state.grid[r][c],{wall:false,visited:false,path:false,frontier:false,prev:null,dist:Infinity});
+  renderGrid(id||state.current);setStatus('Cleared');
+}
+function getNeighbors(r,c){return[[0,1],[1,0],[0,-1],[-1,0]].map(([dr,dc])=>[r+dr,c+dc]).filter(([nr,nc])=>nr>=0&&nr<state.gridRows&&nc>=0&&nc<state.gridCols&&!state.grid[nr][nc].wall);}
+// Shared grid tick — uses state.stepIdx so pause/resume/arena all work on same cursor
+function runGridTick(id){
+  if(!state.running||state.stepIdx>=state.steps.length){
+    state.running=false;state.paused=false;
+    const paths=state.steps.filter(s=>s.type==='path').length;
+    setStatus(paths?`Done ✓ — path: ${paths} cells`:'⚠ No path found!',false,!paths);
+    _restoreStartBtn();return;
+  }
+  if(state.arena){state.running=false;return;} // arena grabbed control
+  const fr=state.steps[state.stepIdx++];
+  if(state.renderFn)state.renderFn(fr);
+  state.timer=setTimeout(()=>runGridTick(id),Math.max(5,60-state.speed*5));
+}
+
+// Resume grid animation from current stepIdx (used by toggleArena OFF)
+function resumeGridViz(id){
+  if(state.running)return;
+  if(!state.steps||!state.steps.length){setStatus('Ready');return;}
+  state.running=true;state.arena=false;setStatus('Running',true);
+  runGridTick(id);
+}
+
+function startGridViz(id,resume=false){
+  if(state.running)return;
+  if(!state.grid)initGrid(id);
+  // On fresh start: regenerate all steps. On resume: keep existing steps+stepIdx.
+  if(!resume){
+    const R=state.gridRows,C=state.gridCols;
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++)Object.assign(state.grid[r][c],{visited:false,path:false,frontier:false,prev:null,dist:Infinity});
+    renderGrid(id);
+    // Generate steps
+    const{startCell,endCell,grid}=state;
+    const algo=ALGOS[id].algo;
+    const steps=[];
+    const key=(r,c)=>`${r},${c}`;
+    if(algo==='bfs'){
+      const queue=[[startCell.r,startCell.c]];grid[startCell.r][startCell.c].visited=true;
+      while(queue.length){
+        const[r,c]=queue.shift();steps.push({type:'visit',r,c});
+        if(r===endCell.r&&c===endCell.c)break;
+        getNeighbors(r,c).forEach(([nr,nc])=>{if(!grid[nr][nc].visited){grid[nr][nc].visited=true;grid[nr][nc].prev=[r,c];queue.push([nr,nc]);steps.push({type:'frontier',r:nr,c:nc});}});
+      }
+    } else if(algo==='dfs'){
+      const stack=[[startCell.r,startCell.c]];const vis=new Set([key(startCell.r,startCell.c)]);
+      while(stack.length){
+        const[r,c]=stack.pop();grid[r][c].visited=true;steps.push({type:'visit',r,c});
+        if(r===endCell.r&&c===endCell.c)break;
+        getNeighbors(r,c).forEach(([nr,nc])=>{if(!vis.has(key(nr,nc))){vis.add(key(nr,nc));grid[nr][nc].prev=[r,c];stack.push([nr,nc]);steps.push({type:'frontier',r:nr,c:nc});}});
+      }
+    } else {
+      const dist={};dist[key(startCell.r,startCell.c)]=0;grid[startCell.r][startCell.c].dist=0;
+      const pq=[[0,startCell.r,startCell.c]];
+      const h=(r,c)=>algo==='astar'?Math.abs(r-endCell.r)+Math.abs(c-endCell.c):0;
+      while(pq.length){
+        pq.sort((a,b)=>a[0]-b[0]);const[d,r,c]=pq.shift();
+        if(grid[r][c].visited)continue;
+        grid[r][c].visited=true;steps.push({type:'visit',r,c});
+        if(r===endCell.r&&c===endCell.c)break;
+        getNeighbors(r,c).forEach(([nr,nc])=>{
+          const w=state.extra.weights[nr][nc],nd=d+w;
+          if(nd<(dist[key(nr,nc)]||Infinity)){dist[key(nr,nc)]=nd;grid[nr][nc].prev=[r,c];grid[nr][nc].dist=nd;pq.push([nd+h(nr,nc),nr,nc]);steps.push({type:'frontier',r:nr,c:nc});}
+        });
+      }
+    }
+    let cur=[endCell.r,endCell.c];
+    while(cur){
+      if(cur[0]===startCell.r&&cur[1]===startCell.c)break;
+      steps.push({type:'path',r:cur[0],c:cur[1]});
+      const prev=grid[cur[0]][cur[1]].prev;cur=prev;
+    }
+    state.steps=steps;state.stepIdx=0;
+    state.renderFn=fr=>{
+      const el=document.getElementById(`gc-${fr.r}-${fr.c}`);if(!el)return;
+      if(fr.type==='visit')el.className='grid-cell visited';
+      else if(fr.type==='frontier')el.className='grid-cell frontier';
+      else if(fr.type==='path')el.className='grid-cell path';
+      updateCellClass(document.getElementById(`gc-${startCell.r}-${startCell.c}`),startCell.r,startCell.c);
+      updateCellClass(document.getElementById(`gc-${endCell.r}-${endCell.c}`),endCell.r,endCell.c);
+    };
+  }
+  state.running=true;setStatus('Running',true);
+  runGridTick(id);
+}
+
+// ═══════════════════════════════════════════
+// GRAPH TRAVERSAL (fixed layout)
+// ═══════════════════════════════════════════
+function initGraph(id){
+  const algo=ALGOS[id].algo;
+  const n=algo==='topo'?8:9;
+  const cx=350,cy=195,rx=200,ry=145;
+  const nodes=Array.from({length:n},(_,i)=>({
+    id:i,
+    x:cx+Math.cos(i/n*2*Math.PI-Math.PI/2)*rx+(Math.random()-.5)*18,
+    y:cy+Math.sin(i/n*2*Math.PI-Math.PI/2)*ry+(Math.random()-.5)*14,
+    label:algo==='topo'?String.fromCharCode(65+i):i
+  }));
+  let edges=[];
+  if(algo==='topo'){
+    edges=[[0,2],[0,3],[1,3],[1,4],[2,5],[3,5],[3,6],[4,6],[5,7],[6,7]];
+    const layers=[[0,1],[2,3,4],[5,6],[7]];
+    layers.forEach((layer,li)=>layer.forEach((ni,ei)=>{
+      nodes[ni].x=100+(ei+1)*(560/(layer.length+1));
+      nodes[ni].y=55+li*112;
+    }));
+  } else {
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.random()<0.30)edges.push([i,j]);
+    if(!edges.some(e=>e[0]===0||e[1]===0))edges.push([0,1]);
+    if(!edges.some(e=>e[0]===1||e[1]===1))edges.push([1,2]);
+  }
+  state.extra.graphNodes=nodes;state.extra.graphEdges=edges;state.extra.graphAlgo=algo;
+  genGraphSteps();
+  renderGraph([],[],null,[]);
+}
+function genGraphSteps(){
+  const{graphNodes:nodes,graphEdges:edges,graphAlgo:algo}=state.extra;
+  if(!nodes)return;
+  const n=nodes.length;
+  const lbl=i=>nodes[i].label; // shorthand
+  const adj=Array.from({length:n},()=>[]);
+  edges.forEach(([a,b])=>{adj[a].push(b);if(algo!=='topo')adj[b].push(a);});
+  const steps=[],visited=[];
+
+  if(algo==='bfs'){
+    const vis=new Set([0]);const q=[0];visited.push(0);
+    const nbStr=node=>{
+      const nbs=adj[node].map(nb=>lbl(nb));
+      return nbs.length?nbs.join(', '):'(none)';
+    };
+    steps.push({
+      visited:[...visited],frontier:[...q],current:0,topo:[],pathStr:'',
+      queueStr:`Queue: [${lbl(0)}]`,
+      explain:`Start: enqueue node <b style="color:var(--cyan)">${lbl(0)}</b>. Mark visited.\nQueue: [${lbl(0)}]`,
+      code:[1,2]
+    });
+    while(q.length){
+      const node=q.shift();
+      const newNbs=adj[node].filter(nb=>!vis.has(nb));
+      steps.push({
+        visited:[...visited],frontier:[...q],current:node,topo:[],
+        pathStr:visited.map(v=>lbl(v)).join(' → '),
+        queueStr:`Queue: [${q.map(x=>lbl(x)).join(', ')||'empty'}]`,
+        explain:`Dequeue <b style="color:var(--amber)">${lbl(node)}</b>. Visit it.\nNeighbors of ${lbl(node)}: ${nbStr(node)}\nUnvisited → push: [${newNbs.map(x=>lbl(x)).join(', ')||'none'}]`,
+        code:[4,5]
+      });
+      adj[node].forEach(nb=>{if(!vis.has(nb)){vis.add(nb);visited.push(nb);q.push(nb);}});
+      steps.push({
+        visited:[...visited],frontier:[...q],current:node,topo:[],
+        pathStr:visited.map(v=>lbl(v)).join(' → '),
+        queueStr:`Queue: [${q.map(x=>lbl(x)).join(', ')||'empty'}]`,
+        explain:`After processing <b style="color:var(--amber)">${lbl(node)}</b>:\nVisited: ${visited.map(v=>lbl(v)).join(' → ')}\nQueue: [${q.map(x=>lbl(x)).join(', ')||'empty'}]`,
+        code:[6,7,8]
+      });
+    }
+  } else if(algo==='dfs'){
+    const vis=new Set();const callStack=[];
+    function dfs(node,depth=0){
+      vis.add(node);visited.push(node);callStack.push(lbl(node));
+      steps.push({
+        visited:[...visited],frontier:[],current:node,topo:[],
+        pathStr:visited.map(v=>lbl(v)).join(' → '),
+        queueStr:`Stack: [${[...callStack].reverse().join(', ')}]`,
+        explain:`Visit <b style="color:var(--amber)">${lbl(node)}</b> (depth ${depth}).\nMark as visited. Recurse into unvisited neighbors.\nCall stack: [${[...callStack].reverse().join(' → ')}]`,
+        code:[1,2]
+      });
+      adj[node].forEach(nb=>{
+        if(!vis.has(nb)){
+          steps.push({
+            visited:[...visited],frontier:[nb],current:node,topo:[],
+            pathStr:visited.map(v=>lbl(v)).join(' → '),
+            queueStr:`Next: ${lbl(nb)} (unvisited neighbor of ${lbl(node)})`,
+            explain:`From <b>${lbl(node)}</b>: neighbor <b style="color:var(--purple)">${lbl(nb)}</b> is unvisited → call DFS(${lbl(nb)})`,
+            code:[3,4,5]
+          });
+          dfs(nb,depth+1);
+        }
+      });
+      callStack.pop();
+    }
+    for(let i=0;i<n;i++)if(!vis.has(i))dfs(i);
+  } else if(algo==='topo'){
+    const inDeg=Array(n).fill(0);edges.forEach(([a,b])=>inDeg[b]++);
+    const q=[],topo=[];
+    for(let i=0;i<n;i++)if(inDeg[i]===0)q.push(i);
+    const inDegStr=()=>nodes.map((_,i)=>`${lbl(i)}:${inDeg[i]}`).join(' ');
+    steps.push({
+      visited:[],frontier:[...q],current:-1,topo:[],
+      pathStr:'',queueStr:`Queue: [${q.map(x=>lbl(x)).join(', ')}]`,
+      explain:`Compute in-degrees: ${inDegStr()}\nNodes with in-degree 0 → start queue: [${q.map(x=>lbl(x)).join(', ')}]`,
+      code:[1,2]
+    });
+    while(q.length){
+      const node=q.shift();topo.push(node);
+      const nbs=adj[node];
+      steps.push({
+        visited:[...topo],frontier:[...q],current:node,topo:[...topo],
+        pathStr:topo.map(v=>lbl(v)).join(' → '),
+        queueStr:`Queue: [${q.map(x=>lbl(x)).join(', ')||'empty'}]`,
+        explain:`Dequeue <b style="color:var(--amber)">${lbl(node)}</b>. Add to result.\nResult so far: ${topo.map(v=>lbl(v)).join(' → ')}\nDecrement in-degree of neighbors: ${nbs.map(x=>lbl(x)).join(', ')||'(none)'}`,
+        code:[5,6]
+      });
+      adj[node].forEach(nb=>{inDeg[nb]--;if(inDeg[nb]===0)q.push(nb);});
+      steps.push({
+        visited:[...topo],frontier:[...q],current:node,topo:[...topo],
+        pathStr:topo.map(v=>lbl(v)).join(' → '),
+        queueStr:`Queue: [${q.map(x=>lbl(x)).join(', ')||'empty'}]`,
+        explain:`After processing <b>${lbl(node)}</b>:\nIn-degrees now: ${inDegStr()}\nNewly zero → pushed: [${adj[node].filter(x=>inDeg[x]===0).map(x=>lbl(x)).join(', ')||'none'}]`,
+        code:[8,9,10]
+      });
+    }
+  }
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>{
+    renderGraph(fr.visited,fr.frontier,fr.current,fr.topo);
+    updateGraphExplain(fr.explain||'',fr.pathStr||'',fr.queueStr||'');
+  };
+}
+
+// ── Graph explain panel helpers ────────────────────────────────────────────────
+function ensureGraphExplainPanel(){
+  let wrap=document.getElementById('graph-explain-wrap');
+  if(wrap)return wrap;
+  wrap=document.createElement('div');
+  wrap.id='graph-explain-wrap';wrap.className='graph-explain-wrap';
+  wrap.style.cssText='width:700px;max-width:100%;margin-top:8px;';
+
+  const pathBar=document.createElement('div');
+  pathBar.id='graph-path-bar';pathBar.className='graph-path-bar';
+  pathBar.innerHTML='<span style="color:var(--text-dim);font-size:9px;letter-spacing:1px;">TRAVERSAL PATH </span>';
+
+  const backend=document.createElement('div');
+  backend.id='graph-backend';backend.className='graph-backend';
+  backend.innerHTML='<div class="graph-backend-title">⚙ BACKEND LOG</div><div id="graph-explain-lines"></div>';
+
+  wrap.appendChild(pathBar);wrap.appendChild(backend);
+  document.getElementById('av-canvas').appendChild(wrap);
+  return wrap;
+}
+
+function updateGraphExplain(explain,pathStr,queueStr=''){
+  ensureGraphExplainPanel();
+  const pathBar=document.getElementById('graph-path-bar');
+  if(pathBar){
+    pathBar.innerHTML=`<span style="color:var(--text-dim);font-size:9px;letter-spacing:1px;">TRAVERSAL PATH </span>`+
+      (pathStr?`<span style="color:var(--amber)">${pathStr}</span>`:`<span style="color:var(--text-dim)">—</span>`);
+  }
+  const linesEl=document.getElementById('graph-explain-lines');
+  if(!linesEl)return;
+  if(explain===_lastExplain)return;
+  _lastExplain=explain;
+  // Fade out old lines, fade in new
+  const lines=explain.split('\n').filter(Boolean);
+  const prevLines=linesEl.querySelectorAll('.graph-explain-line:not(.old)');
+  prevLines.forEach(el=>{el.classList.add('old');setTimeout(()=>el.remove(),380);});
+  lines.forEach((txt,i)=>{
+    const div=document.createElement('div');
+    div.className='graph-explain-line '+(i===0?'cur':'prev');
+    div.innerHTML=txt;
+    div.style.opacity='0';div.style.transform='translateY(4px)';
+    linesEl.appendChild(div);
+    setTimeout(()=>{div.style.transition='opacity .3s,transform .3s';div.style.opacity='1';div.style.transform='translateY(0)';},i*60+80);
+  });
+  if(queueStr){
+    const qDiv=document.createElement('div');
+    qDiv.className='graph-explain-line prev';
+    qDiv.innerHTML=`<span class="ds-badge">${queueStr}</span>`;
+    qDiv.style.cssText='opacity:0;transform:translateY(4px);margin-top:3px;';
+    linesEl.appendChild(qDiv);
+    setTimeout(()=>{qDiv.style.transition='opacity .3s,transform .3s';qDiv.style.opacity='1';qDiv.style.transform='translateY(0)';},lines.length*60+100);
+  }
+}
+
+function renderGraph(visited,frontier,current,topoOrder){
+  const{graphNodes:nodes,graphEdges:edges,graphAlgo:algo}=state.extra;
+  if(!nodes)return;
+  const cv=getCanvas(700,370);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+  // Draw edges with visited-edge highlighting
+  edges.forEach(([a,b])=>{
+    const na=nodes[a],nb=nodes[b];
+    const bothVisited=visited&&visited.includes(a)&&visited.includes(b);
+    ctx.strokeStyle=bothVisited?'#00e67644':'#253d6a';
+    ctx.lineWidth=bothVisited?2.5:1.8;
+    if(algo==='topo'){
+      const dx=nb.x-na.x,dy=nb.y-na.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+      const ux=dx/len,uy=dy/len,ex=nb.x-ux*20,ey=nb.y-uy*20;
+      ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(ex,ey);ctx.stroke();
+      ctx.fillStyle=bothVisited?'#00e67644':'#253d6a';
+      ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex-uy*7-ux*11,ey+ux*7-uy*11);ctx.lineTo(ex+uy*7-ux*11,ey-ux*7-uy*11);ctx.fill();
+    } else {ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.stroke();}
+  });
+  // Draw nodes
+  nodes.forEach((nd,i)=>{
+    let col='#1e3058';
+    if(visited&&visited.includes(i))col='#00e676';
+    if(frontier&&frontier.includes(i))col='#ce93d8';
+    if(current===i)col='#ffc107';
+    ctx.beginPath();ctx.arc(nd.x,nd.y,20,0,Math.PI*2);
+    ctx.fillStyle=col+'cc';ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=current===i?'#000':'#fff';ctx.font='bold 12px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(nd.label,nd.x,nd.y);
+  });
+  // Topo order bar (inline on canvas)
+  if(topoOrder&&topoOrder.length){
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(10,338,680,26);
+    ctx.fillStyle='#ffc107';ctx.font='11px Fira Code';ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.fillText('Topo Order: '+topoOrder.map(i=>nodes[i].label).join(' → '),18,351);
+  }
+  // Legend
+  ctx.textBaseline='top';
+  [['#1e3058','Unvisited'],['#ce93d8','Frontier'],['#ffc107','Current'],['#00e676','Visited']].forEach(([col,lbl],i)=>{
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(22+i*130,18,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#5a7099';ctx.font='10px Fira Code';ctx.fillText(lbl,33+i*130,13);
+  });
+  // Ensure explain panel exists below canvas
+  ensureGraphExplainPanel();
+}
+
+// ═══════════════════════════════════════════
+// DSU
+// ═══════════════════════════════════════════
+function initDSU(){
+  const n=10;state.extra.dsuN=n;
+  state.extra.dsuParent=Array.from({length:n},(_,i)=>i);
+  state.extra.dsuRank=Array(n).fill(0);state.extra.dsuEdges=[];
+  state.extra.dsuPos=Array.from({length:n},(_,i)=>({x:65+i%5*125+(Math.random()-.5)*20,y:90+Math.floor(i/5)*200+(Math.random()-.5)*20}));
+  state.steps=[];state.stepIdx=0;
+  renderDSU([]);
+}
+function dsuFind(parent,x){if(parent[x]!==x)parent[x]=dsuFind(parent,parent[x]);return parent[x];}
+function renderDSU(highlight){
+  const{dsuN:n,dsuParent:par,dsuPos:pos,dsuEdges:edges}=state.extra;
+  const cv=getCanvas(700,400);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+  const comp={},compColors=['#00e5ff','#ffc107','#00e676','#ff4081','#ce93d8','#ff7043','#26c6da','#66bb6a'];
+  const rootMap={};let ci=0;
+  for(let i=0;i<n;i++){const root=dsuFind([...par],i);if(!(root in rootMap)){rootMap[root]=compColors[ci%compColors.length];ci++;}comp[i]=rootMap[root];}
+  edges.forEach(([a,b])=>{ctx.strokeStyle=comp[a];ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pos[a].x,pos[a].y);ctx.lineTo(pos[b].x,pos[b].y);ctx.stroke();});
+  for(let i=0;i<n;i++){
+    const hl=highlight.includes(i);
+    ctx.beginPath();ctx.arc(pos[i].x,pos[i].y,22,0,Math.PI*2);
+    ctx.fillStyle=hl?'#fff':comp[i]+'44';ctx.fill();
+    ctx.strokeStyle=comp[i];ctx.lineWidth=hl?3:2;ctx.stroke();
+    ctx.fillStyle=hl?'#000':comp[i];ctx.font='bold 13px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(i,pos[i].x,pos[i].y);
+    if(par[i]!==i){ctx.strokeStyle='#1e3058';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(pos[i].x,pos[i].y-24);ctx.lineTo(pos[par[i]].x,pos[par[i]].y+24);ctx.stroke();ctx.setLineDash([]);}
+  }
+  const nr=Object.keys(rootMap).length;
+  ctx.fillStyle='#5a7099';ctx.font='10px Fira Code';ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillText(`${nr} component(s) — click ▶ Run Unions to animate`,20,370);
+}
+function runGraphAnim_dsu(){
+  const n=state.extra.dsuN;
+  const parent=[...Array(n).keys()],rank=Array(n).fill(0);
+  const pairs=[];for(let i=0;i<Math.floor(n*0.85);i++)pairs.push([Math.floor(Math.random()*n),Math.floor(Math.random()*n)]);
+  const steps=[];state.extra.dsuEdges=[];
+  pairs.forEach(([a,b])=>{
+    let ra=dsuFind(parent,a),rb=dsuFind(parent,b);
+    if(ra!==rb){
+      if(rank[ra]<rank[rb]){let t=ra;ra=rb;rb=t;}
+      parent[rb]=ra;if(rank[ra]===rank[rb])rank[ra]++;
+      state.extra.dsuEdges.push([a,b]);
+      steps.push({highlight:[a,b],par:[...parent],code:[7,8,9,10,11,12]});
+    }
+  });
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>{state.extra.dsuParent=fr.par;renderDSU(fr.highlight);};
+  let idx=0;
+  function tick(){
+    if(!state.running||idx>=steps.length){state.running=false;state.paused=false;setStatus('Done ✓');_restoreStartBtn();return;}
+    const fr=steps[idx++];state.extra.dsuParent=fr.par;renderDSU(fr.highlight);highlightCode(fr.code);
+    state.timer=setTimeout(tick,Math.max(150,800-state.speed*70));
+  }
+  tick();
+}
+
+
+// ═══════════════════════════════════════════
+// TREE (BST + Tree Traversals)
+// ═══════════════════════════════════════════
+class TreeNode{constructor(v){this.val=v;this.left=null;this.right=null;}}
+function initTree(){
+  const vals=[50,30,70,20,40,60,80,10,25];
+  state.extra.treeRoot=null;
+  vals.forEach(v=>{state.extra.treeRoot=bstInsertNode(state.extra.treeRoot,v);});
+  state.extra.treeHighlight=new Set();state.extra.traversalOrder=[];
+  renderTree(new Set(),[]);
+}
+function bstInsertNode(root,val){
+  if(!root)return new TreeNode(val);
+  if(val<root.val)root.left=bstInsertNode(root.left,val);
+  else if(val>root.val)root.right=bstInsertNode(root.right,val);
+  return root;
+}
+function bstDeleteNode(root,val){
+  if(!root)return null;
+  if(val<root.val){root.left=bstDeleteNode(root.left,val);}
+  else if(val>root.val){root.right=bstDeleteNode(root.right,val);}
+  else{
+    if(!root.left)return root.right;
+    if(!root.right)return root.left;
+    let succ=root.right;while(succ.left)succ=succ.left;
+    root.val=succ.val;root.right=bstDeleteNode(root.right,succ.val);
+  }
+  return root;
+}
+function countTreeNodes(root){let c=0;function cnt(n){if(!n)return;c++;cnt(n.left);cnt(n.right);}cnt(root);return c;}
+function treeInsert(){
+  const v=+(document.getElementById('ctrl-tval')||{value:0}).value;
+  if(!v){setStatus('Enter a value',false,true);return;}
+  state.extra.treeRoot=bstInsertNode(state.extra.treeRoot,v);
+  renderTree(new Set(),[]);setStatus(`Inserted ${v} ✓`);
+}
+function treeSearch(){
+  const v=+(document.getElementById('ctrl-tval')||{value:0}).value;
+  if(!v){setStatus('Enter a value',false,true);return;}
+  const path=[];let node=state.extra.treeRoot;
+  while(node){path.push(node.val);if(v===node.val)break;node=v<node.val?node.left:node.right;}
+  let idx=0;
+  function tick(){
+    if(idx>=path.length){
+      renderTree(new Set([path[path.length-1]]),path);
+      setStatus(path[path.length-1]===v?`Found ${v} ✓`:`${v} not found ✗`,false,path[path.length-1]!==v);return;
+    }
+    renderTree(new Set([path[idx]]),path.slice(0,idx+1));
+    idx++;state.timer=setTimeout(tick,400-state.speed*30);
+  }
+  tick();
+}
+function treeDelete(){
+  const v=+(document.getElementById('ctrl-tval')||{value:0}).value;
+  if(!v){setStatus('Enter a value to delete',false,true);return;}
+  const cnt=countTreeNodes(state.extra.treeRoot);
+  if(cnt<=1){setStatus('⚠ Cannot delete — only 1 node left',false,true);return;}
+  // Check node exists
+  let found=false;
+  function checkExists(n){if(!n)return;if(n.val===v)found=true;checkExists(n.left);checkExists(n.right);}
+  checkExists(state.extra.treeRoot);
+  if(!found){setStatus(`✗ Node ${v} not in tree`,false,true);return;}
+  state.extra.treeRoot=bstDeleteNode(state.extra.treeRoot,v);
+  renderTree(new Set(),[]);setStatus(`Deleted ${v} ✓`);
+}
+function startTraversal(type){
+  const order=[];
+  function inn(n){if(!n)return;inn(n.left);order.push(n.val);inn(n.right);}
+  function pre(n){if(!n)return;order.push(n.val);pre(n.left);pre(n.right);}
+  function post(n){if(!n)return;post(n.left);post(n.right);order.push(n.val);}
+  if(type==='inorder')inn(state.extra.treeRoot);
+  else if(type==='preorder')pre(state.extra.treeRoot);
+  else post(state.extra.treeRoot);
+  // Generate steps for arena support
+  state.steps=order.map((v,i)=>({hlSet:[v],order:order.slice(0,i+1),code:[type==='inorder'?1:type==='preorder'?5:9]}));
+  state.stepIdx=0;
+  state.renderFn=fr=>renderTree(new Set(fr.hlSet||[]),fr.order||[]);
+  let idx=0;state.running=true;setStatus('Running',true);
+  function tick(){
+    if(!state.running||idx>=state.steps.length){state.running=false;setStatus('Done ✓');return;}
+    const fr=state.steps[idx++];renderTree(new Set(fr.hlSet),fr.order);highlightCode(fr.code);
+    state.timer=setTimeout(tick,Math.max(80,500-state.speed*45));
+  }
+  tick();
+}
+function getTreeLayout(root){
+  const positions={};let x=0;
+  function dfs(node,depth){if(!node)return;dfs(node.left,depth+1);positions[node.val]={x:x*65+50,y:depth*78+55};x++;dfs(node.right,depth+1);}
+  dfs(root,0);return positions;
+}
+function renderTree(highlight,order){
+  const root=state.extra.treeRoot;
+  if(!root){const ca=document.getElementById('av-canvas');ca.innerHTML='<div style="color:#5a7099;font-size:12px;padding:20px;font-family:Fira Code">Tree is empty — insert values above.</div>';return;}
+  const pos=getTreeLayout(root);
+  const vals=Object.keys(pos).map(Number);
+  const maxX=Math.max(...vals.map(v=>pos[v].x)),maxY=Math.max(...vals.map(v=>pos[v].y));
+  const W=Math.max(700,maxX+80),H=Math.max(370,maxY+80);
+  const cv=getCanvas(W,H);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,W,H);
+  const offX=Math.max(0,(W-maxX-50)/2);
+  function drawEdges(node){
+    if(!node)return;
+    if(node.left){ctx.strokeStyle='#1e3058';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pos[node.val].x+offX,pos[node.val].y);ctx.lineTo(pos[node.left.val].x+offX,pos[node.left.val].y);ctx.stroke();drawEdges(node.left);}
+    if(node.right){ctx.strokeStyle='#1e3058';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pos[node.val].x+offX,pos[node.val].y);ctx.lineTo(pos[node.right.val].x+offX,pos[node.right.val].y);ctx.stroke();drawEdges(node.right);}
+  }
+  function drawNodes(node){
+    if(!node)return;
+    const{x,y}=pos[node.val];const hl=highlight.has(node.val),inOrd=order.includes(node.val);
+    ctx.beginPath();ctx.arc(x+offX,y,20,0,Math.PI*2);
+    ctx.fillStyle=hl?'#ffc107':inOrd?'#00e67622':'#0d1526';ctx.fill();
+    ctx.strokeStyle=hl?'#ffc107':inOrd?'#00e676':'#1e3058';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=hl?'#000':'#cdd8f0';ctx.font='bold 11px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(node.val,x+offX,y);
+    drawNodes(node.left);drawNodes(node.right);
+  }
+  drawEdges(root);drawNodes(root);
+  if(order.length){ctx.fillStyle='#00e676';ctx.font='11px Fira Code';ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('Order: '+order.join(' → '),20,H-30);}
+}
+
+// ═══════════════════════════════════════════
+// DP — FIBONACCI
+// ═══════════════════════════════════════════
+function initFib(){
+  const n=+(document.getElementById('ctrl-fibN')||{value:10}).value||10;
+  state.extra.fibN=n;state.extra.fibDP=Array(n+1).fill(null);
+  genFibSteps();
+  renderFib([],null);
+}
+function genFibSteps(){
+  const n=state.extra.fibN;
+  const dp=Array(n+1).fill(null);dp[0]=0;dp[1]=1;
+  const steps=[{dp:[...dp],filled:[0,1],current:null,code:[2,3]}];
+  for(let i=2;i<=n;i++){dp[i]=dp[i-1]+dp[i-2];steps.push({dp:[...dp],filled:Array.from({length:i+1},(_,j)=>j),current:i,code:[3,4,5]});}
+  state.steps=steps;state.stepIdx=0;
+  state.extra.fibDP=Array(n+1).fill(null);state.extra.fibDP[0]=0;state.extra.fibDP[1]=1;
+  state.renderFn=fr=>{state.extra.fibDP=fr.dp;renderFib(fr.filled,fr.current);};
+}
+function renderFib(filled,current){
+  const{fibN:n,fibDP:dp}=state.extra;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;padding-top:20px;';
+  const idxRow=document.createElement('div');idxRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
+  for(let i=0;i<=n;i++){const c=document.createElement('div');c.style.cssText='width:46px;height:22px;background:#0a1628;border:1px solid #1e3058;font-size:10px;color:#5a7099;display:flex;align-items:center;justify-content:center;border-radius:3px;font-family:Fira Code;';c.textContent='i='+i;idxRow.appendChild(c);}
+  const valRow=document.createElement('div');valRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
+  for(let i=0;i<=n;i++){
+    const c=document.createElement('div');
+    let bg='#0d1526',border='#1e3058',col='#5a7099';
+    if(i===current){bg='rgba(255,193,7,.2)';border='#ffc107';col='#ffc107';}
+    else if(filled&&filled.includes(i)){bg='rgba(0,230,118,.1)';border='#00e676';col='#00e676';}
+    c.style.cssText=`width:46px;height:46px;background:${bg};border:1px solid ${border};color:${col};display:flex;align-items:center;justify-content:center;border-radius:4px;font-family:Fira Code;font-size:${dp&&dp[i]!=null&&dp[i]>999?9:12}px;font-weight:600;transition:all .2s;`;
+    c.textContent=dp&&dp[i]!=null?dp[i]:'?';valRow.appendChild(c);
+  }
+  wrap.appendChild(idxRow);wrap.appendChild(valRow);
+  const info=document.createElement('div');info.style.cssText='font-size:11px;color:#5a7099;font-family:Fira Code;';
+  if(current!=null&&dp)info.innerHTML=`<span style="color:#ffc107">dp[${current}]</span> = dp[${current-1}] + dp[${current-2}] = <span style="color:#00e5ff">${dp[current]}</span>`;
+  wrap.appendChild(info);ca.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════
+// DP — KNAPSACK
+// ═══════════════════════════════════════════
+function initKnapsack(){
+  state.extra.ksW=8;state.extra.ksN=5;
+  state.extra.ksWts=[2,3,4,5,1];state.extra.ksVals=[3,4,5,6,2];
+  state.extra.ksDP=Array.from({length:6},()=>Array(9).fill(0));
+  genKSSteps();renderKS(0,0);
+}
+function genKSSteps(){
+  const{ksN:n,ksW:W,ksWts:wts,ksVals:vals}=state.extra;
+  const dp=Array.from({length:n+1},()=>Array(W+1).fill(0));
+  state.extra.ksDP=dp;const steps=[];
+  for(let i=1;i<=n;i++)for(let w=0;w<=W;w++){
+    if(wts[i-1]<=w)dp[i][w]=Math.max(vals[i-1]+dp[i-1][w-wts[i-1]],dp[i-1][w]);
+    else dp[i][w]=dp[i-1][w];
+    steps.push({i,w,snapshot:dp.map(r=>[...r]),code:[4,5,6,7,8,9]});
+  }
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>{state.extra.ksDP=fr.snapshot;renderKS(fr.i,fr.w);};
+}
+function renderKS(curI,curW){
+  const{ksN:n,ksW:W,ksWts:wts,ksVals:vals,ksDP:dp}=state.extra;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;padding-top:10px;';
+  const iinfo=document.createElement('div');iinfo.style.cssText='display:flex;gap:6px;flex-wrap:wrap;justify-content:center;';
+  for(let i=1;i<=n;i++){const b=document.createElement('div');b.style.cssText=`padding:3px 10px;background:#0d1526;border:1px solid ${i===curI?'#ffc107':'#1e3058'};border-radius:4px;font-size:10px;font-family:Fira Code;color:${i===curI?'#ffc107':'#5a7099'}`;b.innerHTML=`Item ${i}: w=${wts[i-1]} v=${vals[i-1]}`;iinfo.appendChild(b);}
+  wrap.appendChild(iinfo);
+  const tbl=document.createElement('table');tbl.className='dp-table';
+  const thead=document.createElement('thead');const hr=document.createElement('tr');
+  const th0=document.createElement('th');th0.textContent='i\\w';hr.appendChild(th0);
+  for(let w=0;w<=W;w++){const th=document.createElement('th');th.textContent=w;hr.appendChild(th);}
+  thead.appendChild(hr);tbl.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  for(let i=0;i<=n;i++){
+    const tr=document.createElement('tr');
+    const td0=document.createElement('td');td0.textContent=i===0?'∅':`i${i}`;td0.style.cssText='color:#5a7099;font-size:10px;background:#0a1628;';tr.appendChild(td0);
+    for(let w=0;w<=W;w++){
+      const td=document.createElement('td');td.textContent=dp&&dp[i]?dp[i][w]:'';
+      if(i===curI&&w===curW)td.classList.add('active');
+      else if(i<curI||(i===curI&&w<curW))td.classList.add('done');
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);wrap.appendChild(tbl);
+  if(curI>0&&curW>0&&dp&&dp[curI]){const info2=document.createElement('div');info2.style.cssText='font-size:11px;color:#5a7099;font-family:Fira Code;';info2.innerHTML=`<span style="color:#ffc107">dp[${curI}][${curW}]</span> = <span style="color:#00e5ff">${dp[curI][curW]}</span>  |  Max so far: ${Math.max(...dp.flat())}`;wrap.appendChild(info2);}
+  ca.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════
+// DP — LCS
+// ═══════════════════════════════════════════
+function initLCS(){
+  state.extra.lcsS1='ABCBDAB';state.extra.lcsS2='BDCAB';
+  const m=state.extra.lcsS1.length,n=state.extra.lcsS2.length;
+  state.extra.lcsDP=Array.from({length:m+1},()=>Array(n+1).fill(0));
+  genLCSSteps();renderLCS(0,0);
+}
+function genLCSSteps(){
+  const{lcsS1:s1,lcsS2:s2}=state.extra;const m=s1.length,n=s2.length;
+  const dp=Array.from({length:m+1},()=>Array(n+1).fill(0));
+  state.extra.lcsDP=dp;const steps=[];
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){
+    if(s1[i-1]===s2[j-1])dp[i][j]=dp[i-1][j-1]+1;
+    else dp[i][j]=Math.max(dp[i-1][j],dp[i][j-1]);
+    steps.push({i,j,snap:dp.map(r=>[...r]),code:[4,5,6,7,8]});
+  }
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>{state.extra.lcsDP=fr.snap;renderLCS(fr.i,fr.j);};
+}
+function renderLCS(curI,curJ){
+  const{lcsS1:s1,lcsS2:s2,lcsDP:dp}=state.extra;
+  const m=s1.length,n=s2.length;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:10px;';
+  const tbl=document.createElement('table');tbl.className='dp-table';
+  const thead=document.createElement('thead');const hr=document.createElement('tr');
+  [' ',''].concat(s2.split('')).forEach(ch=>{const th=document.createElement('th');th.textContent=ch;hr.appendChild(th);});
+  thead.appendChild(hr);tbl.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  for(let i=0;i<=m;i++){
+    const tr=document.createElement('tr');
+    const rl=document.createElement('td');rl.textContent=i===0?'':s1[i-1];rl.style.cssText='color:#ce93d8;background:#0a1628;font-weight:600;';tr.appendChild(rl);
+    for(let j=0;j<=n;j++){
+      const td=document.createElement('td');td.textContent=dp&&dp[i]?dp[i][j]:'0';
+      if(i===curI&&j===curJ)td.classList.add('active');
+      else if(i<curI||(i===curI&&j<curJ)){if(dp&&dp[i]&&dp[i][j]>0&&i>0&&j>0&&dp[i][j]>dp[i-1][j]&&dp[i][j]>dp[i][j-1])td.classList.add('highlight');else td.classList.add('done');}
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);wrap.appendChild(tbl);
+  const info=document.createElement('div');info.style.cssText='font-size:11px;color:#5a7099;font-family:Fira Code;';
+  if(curI>0&&curJ>0&&dp&&dp[curI]){const match=s1[curI-1]===s2[curJ-1];info.innerHTML=match?`<span style='color:#00e676'>s1[${curI-1}]='${s1[curI-1]}' == s2[${curJ-1}]='${s2[curJ-1]}' → dp[${curI}][${curJ}]=${dp[curI][curJ]}</span>`:`<span style='color:#5a7099'>s1[${curI-1}]≠s2[${curJ-1}] → max=${dp[curI][curJ]}</span>`;}
+  const lbl=document.createElement('div');lbl.style.cssText='font-size:12px;color:#ffc107;font-family:Fira Code;';
+  lbl.textContent=`LCS = ${dp&&dp[m]?dp[m][n]:0}  |  "${s1}" vs "${s2}"`;
+  wrap.appendChild(info);wrap.appendChild(lbl);ca.appendChild(wrap);
+}
+
+
+// ═══════════════════════════════════════════
+// BINARY EXPONENTIATION
+// ═══════════════════════════════════════════
+function initBinExp(){
+  const a=+(document.getElementById('be-a')||{value:2}).value||2;
+  const b=+(document.getElementById('be-b')||{value:10}).value||10;
+  const mod=+(document.getElementById('be-mod')||{value:1000}).value||1000;
+  state.extra.beA=a;state.extra.beB=b;state.extra.beMod=mod;
+  genBinExpSteps();renderBinExp([],null);
+}
+function genBinExpSteps(){
+  let a=state.extra.beA,b=state.extra.beB;const mod=state.extra.beMod;
+  let result=1;a=a%mod;
+  const allRows=[];let step=0;
+  while(b>0){
+    const odd=(b&1)===1,r=odd?result*a%mod:result;
+    allRows.push({step,b_bin:b.toString(2),odd:odd?'yes':'no',result:r,base:a,action:odd?`result=${result}×${a}%${mod}`:'skip'});
+    if(odd)result=r;b>>=1;a=a*a%mod;step++;
+  }
+  allRows.push({step,b_bin:'0',odd:'no',result,base:a,action:'done'});
+  const steps=allRows.map((_,i)=>({rows:allRows.slice(0,i+1),current:i,code:[3,4,5,6,7]}));
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderBinExp(fr.rows,fr.current);
+}
+function renderBinExp(rows,current){
+  const{beA:a,beB:b,beMod:mod}=state.extra;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;padding-top:14px;';
+  const title=document.createElement('div');title.style.cssText='font-size:14px;font-family:Fira Code;color:#ce93d8;';
+  title.innerHTML=`Computing: <span style='color:#ffc107'>${a}^${b}</span> mod <span style='color:#00e5ff'>${mod}</span>`;
+  wrap.appendChild(title);
+  const tbl=document.createElement('table');tbl.className='dp-table';tbl.style.fontSize='11px';
+  const h=document.createElement('tr');['Step','b (binary)','b odd?','result','a','action'].forEach(hd=>{const th=document.createElement('th');th.textContent=hd;h.appendChild(th);});
+  tbl.appendChild(h);
+  rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');const isCur=i===current;
+    [r.step,r.b_bin,r.odd,r.result,r.base,r.action].forEach((val,j)=>{
+      const td=document.createElement('td');td.textContent=val;
+      if(isCur)td.classList.add('active');else if(i<(current||Infinity))td.classList.add('done');
+      if(j===2&&val==='yes')td.style.color='#00e676';
+      tr.appendChild(td);
+    });
+    tbl.appendChild(tr);
+  });
+  wrap.appendChild(tbl);
+  if(rows.length&&rows[rows.length-1].action==='done'){const res=document.createElement('div');res.style.cssText='font-size:14px;font-family:Fira Code;color:#00e676;';res.textContent=`Result: ${a}^${b} mod ${mod} = ${rows[rows.length-1].result}`;wrap.appendChild(res);}
+  ca.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════
+// XOR
+// ═══════════════════════════════════════════
+function initXOR(){
+  const pairs=[[2,3,5],[1,4,1,2,4],[7,3,7,5,3,9,5]];
+  state.extra.xorArr=pairs[Math.floor(Math.random()*pairs.length)];
+  genXORSteps();renderXOR([],0,null);
+}
+function genXORSteps(){
+  const arr=state.extra.xorArr;
+  const steps=arr.map((_,i)=>({done:Array.from({length:i+1},(_,j)=>j),running:i,result:null,code:[2,3,4,5]}));
+  let r=0;arr.forEach(v=>r^=v);
+  steps.push({done:Array.from({length:arr.length},(_,i)=>i),running:null,result:r,code:[]});
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderXOR(fr.done,fr.running,fr.result);
+}
+function renderXOR(done,running,result){
+  const arr=state.extra.xorArr;
+  const cv=getCanvas(700,270);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+  const bw=52,gap=8,sx=Math.max(20,(700-arr.length*(bw+gap))/2),baseY=155;
+  arr.forEach((v,i)=>{
+    const x=sx+i*(bw+gap);let col='#1e3058',tcol='#cdd8f0';
+    if(done&&done.includes(i)){col='rgba(0,229,255,0.15)';tcol='#00e5ff';}
+    if(running===i){col='rgba(255,193,7,0.22)';tcol='#ffc107';}
+    if(result!==null&&done&&done.length===arr.length&&arr.indexOf(result)===i){col='rgba(0,230,118,0.25)';tcol='#00e676';}
+    ctx.fillStyle=col;ctx.strokeStyle=running===i?'#ffc107':'#1e3058';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(x,baseY-58,bw,68,4);ctx.fill();ctx.stroke();
+    ctx.fillStyle=tcol;ctx.font='bold 22px Fira Code';ctx.textAlign='center';ctx.fillText(v,x+bw/2,baseY-14);
+    ctx.fillStyle='#5a7099';ctx.font='9px Fira Code';ctx.fillText('['+i+']',x+bw/2,baseY+14);
+  });
+  if(done&&done.length>0){let xr=0;done.forEach(i=>xr^=arr[i]);ctx.fillStyle='#ffc107';ctx.font='12px Fira Code';ctx.textAlign='left';ctx.fillText(`Running XOR: ${done.map(i=>arr[i]).join(' ⊕ ')} = ${xr}`,20,200);}
+  if(result!=null){ctx.fillStyle='#00e676';ctx.font='bold 14px Fira Code';ctx.fillText(`✓ Unique element = ${result}`,20,228);}
+  ctx.fillStyle='#5a7099';ctx.font='10px Fira Code';ctx.fillText('a⊕a=0  |  a⊕0=a  |  XOR is commutative & associative',20,252);
+}
+
+// ═══════════════════════════════════════════
+// NIM GAME
+// ═══════════════════════════════════════════
+function initNim(){
+  state.extra.nimHeaps=[3,5,7];state.extra.nimHistory=[];state.extra.nimTurn='Player';
+  genNimSteps();renderNim();
+}
+function nimXOR(heaps){return heaps.reduce((a,b)=>a^b,0);}
+function genNimSteps(){
+  let heaps=[...state.extra.nimHeaps];const steps=[];const history=[];
+  function compMove(h){const xr=nimXOR(h);if(xr===0){const ni=h.findIndex(v=>v>0);if(ni>=0){const nh=[...h];nh[ni]--;return nh;}return h;}for(let i=0;i<h.length;i++){const t=h[i]^xr;if(t<h[i]){const nh=[...h];nh[i]=t;return nh;}}return h;}
+  function playerMove(h){const ni=h.findIndex(v=>v>0);if(ni<0)return h;const nh=[...h];nh[ni]=Math.max(0,nh[ni]-1);return nh;}
+  let turn='Computer';
+  for(let s=0;s<40;s++){
+    if(heaps.every(h=>h===0))break;
+    const prev=[...heaps];heaps=turn==='Computer'?compMove(heaps):playerMove(heaps);
+    history.push(`${turn}: [${prev}]→[${heaps}]`);
+    steps.push({heaps:[...heaps],history:[...history],turn,code:[2,3,4,5,6,7,8,9]});
+    turn=turn==='Computer'?'Player':'Computer';
+  }
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>{state.extra.nimHeaps=fr.heaps;state.extra.nimHistory=fr.history;state.extra.nimTurn=fr.turn;renderNim();};
+}
+function renderNim(){
+  const{nimHeaps:heaps,nimHistory:history,nimTurn:turn}=state.extra;
+  if(!heaps){state.extra.nimHeaps=[3,5,7];state.extra.nimHistory=[];state.extra.nimTurn='Player';return renderNim();}
+  const xr=nimXOR(heaps),win=xr!==0;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;padding-top:14px;';
+  const status=document.createElement('div');status.style.cssText='font-size:12px;font-family:Fira Code;';
+  status.innerHTML=`Turn: <b style='color:#00e5ff'>${turn}</b> &nbsp;|&nbsp; XOR = <b style='color:${win?'#00e676':'#ff4081'}'>${xr}</b> → <b>${win?turn+' has winning move':'Losing position'}</b>`;
+  wrap.appendChild(status);
+  const heapRow=document.createElement('div');heapRow.style.cssText='display:flex;gap:28px;align-items:flex-end;';
+  heaps.forEach((h,i)=>{
+    const col=document.createElement('div');col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;';
+    const lbl=document.createElement('div');lbl.style.cssText='font-size:11px;color:#5a7099;font-family:Fira Code;';lbl.textContent=`Heap ${i+1}`;
+    const sticks=document.createElement('div');sticks.style.cssText='display:flex;gap:4px;align-items:flex-end;min-height:90px;';
+    for(let s=0;s<h;s++){const st=document.createElement('div');st.style.cssText='width:14px;height:'+(16+s*3)+'px;background:linear-gradient(180deg,#ffe060,#ffc107);border-radius:2px 2px 0 0;';sticks.appendChild(st);}
+    const cnt=document.createElement('div');cnt.style.cssText='font-size:22px;color:#ffc107;font-family:Fira Code;font-weight:700;';cnt.textContent=h;
+    col.appendChild(lbl);col.appendChild(sticks);col.appendChild(cnt);heapRow.appendChild(col);
+  });
+  wrap.appendChild(heapRow);
+  if(history&&history.length){const hist=document.createElement('div');hist.style.cssText='font-size:10px;color:#5a7099;font-family:Fira Code;max-width:600px;text-align:center;';hist.textContent='Last moves: '+history.slice(-4).join(' → ');wrap.appendChild(hist);}
+  if(heaps.every(h=>h===0)){const w=document.createElement('div');w.style.cssText='font-size:16px;color:#00e676;font-family:Fira Code;font-weight:700;';w.textContent=turn==='Player'?'🏆 Computer wins!':'🏆 Player wins!';wrap.appendChild(w);}
+  ca.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════
+// GRUNDY NUMBERS
+// ═══════════════════════════════════════════
+function initGrundy(){
+  const n=+(document.getElementById('ctrl-gN')||{value:8}).value||8;
+  state.extra.grundyN=n;state.extra.grundyMoves=[1,2];state.extra.grundyG=Array(n+1).fill(null);
+  genGrundySteps();renderGrundy([],null);
+}
+function mex(s){let i=0;while(s.has(i))i++;return i;}
+function genGrundySteps(){
+  const n=state.extra.grundyN,moves=state.extra.grundyMoves;
+  const G=Array(n+1).fill(null);G[0]=0;
+  const steps=[{G:[...G],filled:[0],cur:0,code:[1]}];
+  for(let i=1;i<=n;i++){
+    const reach=new Set(moves.filter(m=>i-m>=0).map(m=>G[i-m]));
+    G[i]=mex(reach);
+    steps.push({G:[...G],filled:Array.from({length:i+1},(_,j)=>j),cur:i,code:[2,3,4,5,6,7]});
+  }
+  state.steps=steps;state.stepIdx=0;
+  state.extra.grundyG=Array(n+1).fill(null);
+  state.renderFn=fr=>{state.extra.grundyG=fr.G;renderGrundy(fr.filled,fr.cur);};
+}
+function renderGrundy(filled,current){
+  const{grundyN:n,grundyG:G,grundyMoves:moves}=state.extra;
+  const ca=document.getElementById('av-canvas');ca.innerHTML='';
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;padding-top:12px;';
+  const info=document.createElement('div');info.style.cssText='font-size:11px;color:#5a7099;font-family:Fira Code;';
+  info.textContent=`Moves: {${moves.join(',')}}   G[n] = mex({G[n-m] for m in moves})`;
+  wrap.appendChild(info);
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:6px;flex-wrap:wrap;justify-content:center;';
+  for(let i=0;i<=n;i++){
+    const box=document.createElement('div');
+    let bg='#0d1526',border='#1e3058',col='#5a7099';
+    if(i===current){bg='rgba(255,193,7,.2)';border='#ffc107';col='#ffc107';}
+    else if(filled&&filled.includes(i)&&G&&G[i]!=null){bg=G[i]===0?'rgba(255,64,129,.15)':'rgba(0,230,118,.1)';border=G[i]===0?'#ff4081':'#00e676';col=G[i]===0?'#ff4081':'#00e676';}
+    box.style.cssText=`width:66px;height:74px;background:${bg};border:1px solid ${border};border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s;`;
+    const posEl=document.createElement('div');posEl.style.cssText='font-size:10px;color:#5a7099;font-family:Fira Code;';posEl.textContent='n='+i;
+    const gEl=document.createElement('div');gEl.style.cssText=`font-size:22px;font-weight:700;color:${col};font-family:Fira Code;`;gEl.textContent=G&&G[i]!=null?G[i]:'?';
+    const wlEl=document.createElement('div');wlEl.style.cssText=`font-size:9px;color:${col};font-family:Fira Code;`;
+    if(G&&G[i]!=null)wlEl.textContent=G[i]===0?'Lose':'Win';
+    box.appendChild(posEl);box.appendChild(gEl);box.appendChild(wlEl);row.appendChild(box);
+  }
+  wrap.appendChild(row);
+  if(current!=null&&G&&G[current]!=null){
+    const det=document.createElement('div');det.style.cssText='font-size:11px;font-family:Fira Code;color:#ce93d8;';
+    const rch=moves.filter(m=>current-m>=0).map(m=>`G[${current-m}]=${G[current-m]}`).join(', ');
+    det.innerHTML=`G[${current}] = mex({${rch}}) = <b style='color:#ffc107'>${G[current]}</b> → ${G[current]===0?'<span style="color:#ff4081">Losing</span>':'<span style="color:#00e676">Winning</span>'}`;
+    wrap.appendChild(det);
+  }
+  ca.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════
+// CYCLE DETECTION — UNDIRECTED
+// ═══════════════════════════════════════════
+function _buildCycleUGraph(){
+  const n=8;
+  const cx=350,cy=195,rx=200,ry=145;
+  const nodes=Array.from({length:n},(_,i)=>({
+    id:i,x:cx+Math.cos(i/n*2*Math.PI-Math.PI/2)*rx+(Math.random()-.5)*16,
+    y:cy+Math.sin(i/n*2*Math.PI-Math.PI/2)*ry+(Math.random()-.5)*12,label:i
+  }));
+  let edges=[];
+  // Build a spanning tree first (no cycle), then add one extra edge to guarantee a cycle
+  for(let i=1;i<n;i++)edges.push([i,Math.floor(Math.random()*i)]);
+  // Add one cycle-forming edge
+  const a=Math.floor(Math.random()*(n-2))+1,b=Math.floor(Math.random()*(n-a-1))+a+1;
+  edges.push([a,b]);
+  // Deduplicate
+  const eSet=new Set();edges=edges.filter(([u,v])=>{const k=Math.min(u,v)+','+Math.max(u,v);if(eSet.has(k))return false;eSet.add(k);return true;});
+  state.extra.graphNodes=nodes;state.extra.graphEdges=edges;
+}
+
+function initCycleU(){
+  _buildCycleUGraph();
+  genCycleUSteps();
+  renderCycleU({color:Array(state.extra.graphNodes.length).fill(0),current:-1,parent:{},backEdge:null,done:false,hasCycle:false});
+  setStatus('Ready — click ▶ Start');
+}
+
+function genCycleUSteps(){
+  const{graphNodes:nodes,graphEdges:edges}=state.extra;
+  if(!nodes)return;
+  const n=nodes.length;
+  const adj=Array.from({length:n},()=>[]);
+  edges.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a);});
+  // color: 0=white(unvisited) 1=gray(in stack) 2=black(done)
+  const color=Array(n).fill(0);
+  const parent=Array(n).fill(-1);
+  const steps=[];
+  let cycleFound=false,backEdge=null;
+
+  function dfs(u){
+    color[u]=1;
+    steps.push({
+      color:[...color],current:u,parent:{...parent},backEdge:null,done:false,hasCycle:false,
+      explain:`Visit node <b style="color:var(--amber)">${u}</b> → mark GRAY (in stack)\nParent of ${u}: ${parent[u]>=0?parent[u]:'—'}`,
+      code:[3,4]
+    });
+    for(const v of adj[u]){
+      if(color[v]===0){
+        parent[v]=u;
+        steps.push({
+          color:[...color],current:u,parent:{...parent},backEdge:null,done:false,hasCycle:false,
+          explain:`From <b>${u}</b>: neighbor <b style="color:var(--purple)">${v}</b> is WHITE → recurse DFS(${v})`,
+          code:[5,6,7]
+        });
+        if(dfs(v))return true;
+        if(cycleFound)return true;
+      } else if(v!==parent[u]){
+        // Back edge found
+        cycleFound=true;backEdge=[u,v];
+        steps.push({
+          color:[...color],current:u,parent:{...parent},backEdge:[u,v],done:false,hasCycle:true,
+          explain:`From <b style="color:var(--pink)">${u}</b>: neighbor <b style="color:var(--pink)">${v}</b> is GRAY and not parent → <b style="color:var(--pink)">BACK EDGE!</b>\nCycle detected: ${v} ← … ← ${u} ← ${v}`,
+          code:[8,9]
+        });
+        return true;
+      } else {
+        steps.push({
+          color:[...color],current:u,parent:{...parent},backEdge:null,done:false,hasCycle:false,
+          explain:`From <b>${u}</b>: neighbor <b>${v}</b> is GRAY but is parent → skip (tree edge)`,
+          code:[8]
+        });
+      }
+    }
+    color[u]=2;
+    steps.push({
+      color:[...color],current:u,parent:{...parent},backEdge:null,done:false,hasCycle:false,
+      explain:`Done with node <b>${u}</b> → mark BLACK\nNo back edges found from ${u}`,
+      code:[10]
+    });
+    return false;
+  }
+
+  for(let i=0;i<n;i++){
+    if(color[i]===0){
+      if(dfs(i))break;
+      if(cycleFound)break;
+    }
+  }
+  // Final step
+  steps.push({
+    color:[...color],current:-1,parent:{...parent},backEdge:cycleFound?backEdge:null,done:true,hasCycle:cycleFound,
+    explain:cycleFound
+      ?`<b style="color:var(--pink)">✗ Cycle detected!</b> Back edge: ${backEdge[0]} ↔ ${backEdge[1]}\nThis edge connects to an ancestor — cycle confirmed.`
+      :`<b style="color:var(--green)">✓ No cycle found.</b> All nodes finished BLACK.\nEvery neighbour was either tree-edge or parent → acyclic graph.`,
+    code:[]
+  });
+  state.extra.cycleBackEdge=backEdge;
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderCycleU(fr);
+}
+
+function renderCycleU(fr){
+  const{graphNodes:nodes,graphEdges:edges}=state.extra;
+  if(!nodes)return;
+  const{color,current,parent,backEdge,done,hasCycle}=fr;
+  const cv=getCanvas(700,370);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+
+  // Color palette for 3 states
+  const nodeCol=c=>c===1?'#ffc107':c===2?'#00e676':'#1e3058'; // gray, black, white
+
+  // Draw edges
+  edges.forEach(([a,b])=>{
+    const na=nodes[a],nb=nodes[b];
+    const isBack=backEdge&&((backEdge[0]===a&&backEdge[1]===b)||(backEdge[0]===b&&backEdge[1]===a));
+    const isTree=parent&&(parent[b]===a||parent[a]===b);
+    ctx.strokeStyle=isBack?'#ff4081':isTree&&color[a]>=1&&color[b]>=1?'#00e67644':'#253d6a';
+    ctx.lineWidth=isBack?3:isTree&&color[a]>=1&&color[b]>=1?2.5:1.8;
+    if(isBack){ctx.setLineDash([6,3]);}else{ctx.setLineDash([]);}
+    ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Draw nodes
+  nodes.forEach((nd,i)=>{
+    const col=nodeCol(color?color[i]:0);
+    const isCur=current===i;
+    const isBack=backEdge&&(backEdge[0]===i||backEdge[1]===i);
+    const fillCol=isBack&&done?'#ff4081':col;
+    ctx.beginPath();ctx.arc(nd.x,nd.y,20,0,Math.PI*2);
+    ctx.fillStyle=fillCol+'cc';ctx.fill();
+    ctx.strokeStyle=isCur?'#ffc107':isBack&&done?'#ff4081':fillCol;
+    ctx.lineWidth=isCur?3:2;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 12px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(nd.label,nd.x,nd.y);
+    // State label
+    const stateLabel=color?['','GRAY','BLK'][color[i]]:'';
+    if(stateLabel){
+      ctx.fillStyle=nodeCol(color[i]);ctx.font='8px Fira Code';
+      ctx.fillText(stateLabel,nd.x,nd.y+28);
+    }
+  });
+
+  // Result banner
+  if(done){
+    const bannerCol=hasCycle?'rgba(255,64,129,.15)':'rgba(0,230,118,.12)';
+    const textCol=hasCycle?'#ff4081':'#00e676';
+    ctx.fillStyle=bannerCol;ctx.fillRect(10,338,680,26);
+    ctx.fillStyle=textCol;ctx.font='bold 12px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(hasCycle?`✗ Cycle Found! Back edge: ${backEdge[0]} ↔ ${backEdge[1]}`:'✓ No Cycle — Graph is Acyclic',350,351);
+  }
+
+  // Legend
+  ctx.textBaseline='top';
+  [['#1e3058','WHITE (unvisited)'],['#ffc107','GRAY (in stack)'],['#00e676','BLACK (done)'],['#ff4081','Back edge']].forEach(([col,lbl],i)=>{
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(20+i*160,16,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#5a7099';ctx.font='10px Fira Code';ctx.fillText(lbl,32+i*160,11);
+  });
+  ensureGraphExplainPanel();
+  if(fr.explain)updateGraphExplain(fr.explain,'');
+}
+
+// ═══════════════════════════════════════════
+// CYCLE DETECTION — DIRECTED
+// ═══════════════════════════════════════════
+function _buildCycleDGraph(){
+  const n=8;
+  const cx=350,cy=195,rx=200,ry=145;
+  const nodes=Array.from({length:n},(_,i)=>({
+    id:i,x:cx+Math.cos(i/n*2*Math.PI-Math.PI/2)*rx+(Math.random()-.5)*16,
+    y:cy+Math.sin(i/n*2*Math.PI-Math.PI/2)*ry+(Math.random()-.5)*12,label:i
+  }));
+  let edges=[];
+  // Build a DAG backbone
+  for(let i=1;i<n;i++){
+    const src=Math.floor(Math.random()*i);
+    edges.push([src,i]);
+  }
+  // Add a couple more forward edges
+  for(let k=0;k<3;k++){
+    const a=Math.floor(Math.random()*(n-1));
+    const b=Math.floor(Math.random()*(n-a-1))+a+1;
+    edges.push([a,b]);
+  }
+  // Add one back edge to guarantee a cycle
+  edges.push([n-1,Math.floor(Math.random()*(n-2))]);
+  // Deduplicate
+  const eSet=new Set();edges=edges.filter(([u,v])=>{const k=u+','+v;if(eSet.has(k))return false;eSet.add(k);return true;});
+  state.extra.graphNodes=nodes;state.extra.graphEdges=edges;
+}
+
+function initCycleD(){
+  _buildCycleDGraph();
+  genCycleDSteps();
+  renderCycleD({color:Array(state.extra.graphNodes.length).fill(0),current:-1,backEdge:null,done:false,hasCycle:false});
+  setStatus('Ready — click ▶ Start');
+}
+
+function genCycleDSteps(){
+  const{graphNodes:nodes,graphEdges:edges}=state.extra;
+  if(!nodes)return;
+  const n=nodes.length;
+  const adj=Array.from({length:n},()=>[]);
+  edges.forEach(([a,b])=>adj[a].push(b));
+  // 0=WHITE 1=GRAY 2=BLACK
+  const color=Array(n).fill(0);
+  const steps=[];
+  let cycleFound=false,backEdge=null;
+
+  function dfs(u){
+    color[u]=1;
+    steps.push({
+      color:[...color],current:u,backEdge:null,done:false,hasCycle:false,
+      explain:`Visit node <b style="color:var(--amber)">${u}</b> → color = GRAY (on recursion stack)\nGray means: currently being explored`,
+      code:[4,5]
+    });
+    for(const v of adj[u]){
+      if(color[v]===1){
+        // Back edge
+        cycleFound=true;backEdge=[u,v];
+        steps.push({
+          color:[...color],current:u,backEdge:[u,v],done:false,hasCycle:true,
+          explain:`From <b style="color:var(--pink)">${u}</b> → <b style="color:var(--pink)">${v}</b>: neighbor is GRAY!\n<b style="color:var(--pink)">Back edge detected → Cycle: ${v} → … → ${u} → ${v}</b>`,
+          code:[6,7,8]
+        });
+        return true;
+      }
+      if(color[v]===0){
+        steps.push({
+          color:[...color],current:u,backEdge:null,done:false,hasCycle:false,
+          explain:`From <b>${u}</b> → <b style="color:var(--purple)">${v}</b>: WHITE → recurse DFS(${v})`,
+          code:[9,10,11]
+        });
+        if(dfs(v))return true;
+        if(cycleFound)return true;
+      } else {
+        steps.push({
+          color:[...color],current:u,backEdge:null,done:false,hasCycle:false,
+          explain:`From <b>${u}</b> → <b>${v}</b>: BLACK (already fully explored) → safe, skip`,
+          code:[6]
+        });
+      }
+    }
+    color[u]=2;
+    steps.push({
+      color:[...color],current:u,backEdge:null,done:false,hasCycle:false,
+      explain:`Node <b>${u}</b> fully explored → color = BLACK\nAll outgoing edges checked, no back edge from ${u}`,
+      code:[11,12]
+    });
+    return false;
+  }
+
+  for(let i=0;i<n;i++){
+    if(color[i]===0){
+      if(dfs(i))break;
+      if(cycleFound)break;
+    }
+  }
+
+  steps.push({
+    color:[...color],current:-1,backEdge:cycleFound?backEdge:null,done:true,hasCycle:cycleFound,
+    explain:cycleFound
+      ?`<b style="color:var(--pink)">✗ Cycle detected!</b> Back edge: ${backEdge[0]} → ${backEdge[1]}\nNode ${backEdge[1]} was GRAY when reached from ${backEdge[0]} — still on the call stack.`
+      :`<b style="color:var(--green)">✓ No cycle found.</b> All nodes are BLACK.\nThis is a valid DAG (Directed Acyclic Graph).`,
+    code:[]
+  });
+  state.extra.cycleBackEdge=backEdge;
+  state.steps=steps;state.stepIdx=0;
+  state.renderFn=fr=>renderCycleD(fr);
+}
+
+function renderCycleD(fr){
+  const{graphNodes:nodes,graphEdges:edges}=state.extra;
+  if(!nodes)return;
+  const{color,current,backEdge,done,hasCycle}=fr;
+  const cv=getCanvas(700,370);const ctx=cv.getContext('2d');
+  ctx.fillStyle='#060b14';ctx.fillRect(0,0,cv.width,cv.height);
+
+  const nodeCol=c=>c===1?'#ffc107':c===2?'#00e676':'#1e3058';
+
+  // Draw directed edges (with arrowheads)
+  edges.forEach(([a,b])=>{
+    const na=nodes[a],nb=nodes[b];
+    const isBack=backEdge&&backEdge[0]===a&&backEdge[1]===b;
+    const bothDone=color&&color[a]>=1&&color[b]>=1;
+    ctx.strokeStyle=isBack?'#ff4081':bothDone&&!isBack?'#00e67644':'#253d6a';
+    ctx.lineWidth=isBack?3:bothDone?2.5:1.8;
+    if(isBack){ctx.setLineDash([6,3]);}else{ctx.setLineDash([]);}
+    // Shorten line to not overlap node circle
+    const dx=nb.x-na.x,dy=nb.y-na.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const ux=dx/len,uy=dy/len;
+    const ex=nb.x-ux*22,ey=nb.y-uy*22;
+    ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(ex,ey);ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrowhead
+    const arrowCol=isBack?'#ff4081':bothDone?'#00e67644':'#253d6a';
+    ctx.fillStyle=arrowCol;
+    ctx.beginPath();
+    ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-uy*7-ux*12,ey+ux*7-uy*12);
+    ctx.lineTo(ex+uy*7-ux*12,ey-ux*7-uy*12);
+    ctx.fill();
+  });
+
+  // Draw nodes
+  nodes.forEach((nd,i)=>{
+    const col=nodeCol(color?color[i]:0);
+    const isCur=current===i;
+    const isBackNode=backEdge&&(backEdge[0]===i||backEdge[1]===i)&&done;
+    const fillCol=isBackNode?'#ff4081':col;
+    ctx.beginPath();ctx.arc(nd.x,nd.y,20,0,Math.PI*2);
+    ctx.fillStyle=fillCol+'cc';ctx.fill();
+    ctx.strokeStyle=isCur?'#fff':isBackNode?'#ff4081':fillCol;
+    ctx.lineWidth=isCur?3:2;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 12px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(nd.label,nd.x,nd.y);
+    const stateLabel=color?['','GRAY','BLK'][color[i]]:'';
+    if(stateLabel){
+      ctx.fillStyle=nodeCol(color[i]);ctx.font='8px Fira Code';
+      ctx.fillText(stateLabel,nd.x,nd.y+28);
+    }
+  });
+
+  // Result banner
+  if(done){
+    const bannerCol=hasCycle?'rgba(255,64,129,.15)':'rgba(0,230,118,.12)';
+    const textCol=hasCycle?'#ff4081':'#00e676';
+    ctx.fillStyle=bannerCol;ctx.fillRect(10,338,680,26);
+    ctx.fillStyle=textCol;ctx.font='bold 12px Fira Code';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(hasCycle?`✗ Cycle Found! Back edge: ${backEdge[0]} → ${backEdge[1]}`:'✓ No Cycle — This is a Valid DAG',350,351);
+  }
+
+  // Legend
+  ctx.textBaseline='top';
+  [['#1e3058','WHITE (unvisited)'],['#ffc107','GRAY (in stack)'],['#00e676','BLACK (done)'],['#ff4081','Back edge']].forEach(([col,lbl],i)=>{
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(20+i*160,16,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#5a7099';ctx.font='10px Fira Code';ctx.fillText(lbl,32+i*160,11);
+  });
+  ensureGraphExplainPanel();
+  if(fr.explain)updateGraphExplain(fr.explain,'');
+}
+
+buildSidebar();
+</script>
+</body>
+</html>
