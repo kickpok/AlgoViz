@@ -115,12 +115,13 @@ function genGraphSteps(){
         explain:`Dequeue <b style="color:var(--amber)">${lbl(node)}</b>. Add to result.\nResult so far: ${topo.map(v=>lbl(v)).join(' → ')}\nDecrement in-degree of neighbors: ${nbs.map(x=>lbl(x)).join(', ')||'(none)'}`,
         code:[5,6]
       });
-      adj[node].forEach(nb=>{inDeg[nb]--;if(inDeg[nb]===0)q.push(nb);});
+      const newlyZero=[];
+      adj[node].forEach(nb=>{inDeg[nb]--;if(inDeg[nb]===0){q.push(nb);newlyZero.push(nb);}});
       steps.push({
         visited:[...topo],frontier:[...q],current:node,topo:[...topo],
         pathStr:topo.map(v=>lbl(v)).join(' → '),
         queueStr:`Queue: [${q.map(x=>lbl(x)).join(', ')||'empty'}]`,
-        explain:`After processing <b>${lbl(node)}</b>:\nIn-degrees now: ${inDegStr()}\nNewly zero → pushed: [${adj[node].filter(x=>inDeg[x]===0).map(x=>lbl(x)).join(', ')||'none'}]`,
+        explain:`After processing <b>${lbl(node)}</b>:\nIn-degrees now: ${inDegStr()}\nNewly zero → pushed: [${newlyZero.map(x=>lbl(x)).join(', ')||'none'}]`,
         code:[8,9,10]
       });
     }
