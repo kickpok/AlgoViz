@@ -37,21 +37,61 @@ function buildSidebar(){
 // ═══════════════════════════════════════════
 // LOAD ALGO
 // ═══════════════════════════════════════════
+// ── Approach helpers ──────────────────────────────────────────────────────────
+function _applyApproachContent(id,a,approach){
+  document.getElementById('av-title').textContent=a.name;
+  document.getElementById('av-badge').textContent=a.badge;
+  document.getElementById('av-desc').textContent=a.desc;
+  const code=(approach&&a.approachCodes&&a.approachCodes[approach])||a.code;
+  const info=(approach&&a.approachInfo&&a.approachInfo[approach])||a.info;
+  document.getElementById('av-code').innerHTML=(code||[]).map((l,i)=>`<div class="code-line" id="cl${i}">${l||'&nbsp;'}</div>`).join('');
+  document.getElementById('av-info').innerHTML=info||'';
+}
+function setApproach(ap){
+  if(state.timer){clearTimeout(state.timer);state.timer=null;}
+  state.running=false;state.paused=false;state.arena=false;state.steps=[];state.stepIdx=0;
+  const keep={
+    approach:ap,
+    _customSW:state.extra._customSW,_customTP:state.extra._customTP,
+    _customKadane:state.extra._customKadane,_customBM:state.extra._customBM,
+    _customTarget:state.extra._customTarget,_customArr:state.extra._customArr,
+    fibN:state.extra.fibN,
+    lcsS1:state.extra.lcsS1,lcsS2:state.extra.lcsS2,
+    ksW:state.extra.ksW,ksN:state.extra.ksN,ksWts:state.extra.ksWts,ksVals:state.extra.ksVals,
+    beA:state.extra.beA,beB:state.extra.beB,beMod:state.extra.beMod,
+    cmpCustomArr:state.extra.cmpCustomArr
+  };
+  state.extra=keep;
+  const a=ALGOS[state.current];
+  _applyApproachContent(state.current,a,ap);
+  if(a.approaches)a.approaches.forEach(apDef=>{
+    const btn=document.getElementById(`ap-btn-${apDef.key}`);
+    if(!btn)return;
+    const isActive=apDef.key===ap;
+    btn.classList.toggle('active',isActive);
+    btn.style.background=isActive?apDef.color+'22':'transparent';
+    btn.style.borderColor=isActive?apDef.color:apDef.color+'55';
+    btn.style.color=apDef.color;
+  });
+  _restoreStartBtn();
+  const arenaBtn=document.getElementById('btn-arena');
+  if(arenaBtn){arenaBtn.classList.remove('active');arenaBtn.textContent='🎮 Arena';}
+  document.getElementById('av-canvas').innerHTML='';
+  buildViz(state.current,a);
+}
+
 function loadAlgo(id){
   if(state.timer){clearTimeout(state.timer);state.timer=null;}
   state.running=false;state.arena=false;state.steps=[];state.stepIdx=0;
   state.current=id;
+  const a=ALGOS[id];
+  state.extra={approach:a.approaches?a.approaches[a.approaches.length-1].key:undefined};
   document.querySelectorAll('.algo-item').forEach(e=>e.classList.remove('active'));
   const si=document.getElementById('si-'+id);if(si)si.classList.add('active');
-  document.querySelectorAll('.cat-icon-pill').forEach(p=>p.classList.toggle('has-active',p.title===ALGOS[id].cat));
+  document.querySelectorAll('.cat-icon-pill').forEach(p=>p.classList.toggle('has-active',p.title===a.cat));
   document.getElementById('welcome').style.display='none';
   const av=document.getElementById('algo-view');av.style.display='flex';
-  const a=ALGOS[id];
-  document.getElementById('av-title').textContent=a.name;
-  document.getElementById('av-badge').textContent=a.badge;
-  document.getElementById('av-desc').textContent=a.desc;
-  document.getElementById('av-code').innerHTML=a.code.map((l,i)=>`<div class="code-line" id="cl${i}">${l||'&nbsp;'}</div>`).join('');
-  document.getElementById('av-info').innerHTML=a.info;
+  _applyApproachContent(id,a,state.extra.approach);
   const ep=document.getElementById('av-edges');
   if(a.cases&&a.cases.length){
     ep.style.display='block';
@@ -111,7 +151,18 @@ function buildInputPanel(id){
       clearInputError();
       state.arr=[...arr];state.states=arr.map(()=>({color:COLORS.default}));
       state.steps=genSortSteps(id,[...arr]);state.stepIdx=0;
-      renderSort(state.arr,state.states);setStatus(`Loaded ${arr.length} elements`);
+      renderSort(state.arr,state.states,0,0);setStatus(`Loaded ${arr.length} elements`);
+    });
+  } else if(a.type==='sort_compare'){
+    addField(inner,'Array:','ci-cmp-arr','34,12,67,5,2,89,41,23,55,18','280px','comma-separated integers (max 60)');
+    addApply(inner,()=>{
+      const arr=parseInts(document.getElementById('ci-cmp-arr').value);
+      if(arr.length<2){showInputError('Need at least 2 integers.');return;}
+      if(arr.length>60){showInputError('Max 60 elements.');return;}
+      clearInputError();
+      state.extra.cmpCustomArr=[...arr];
+      initSortCompare();
+      setStatus(`Loaded ${arr.length} elements — click ▶ Race!`);
     });
   } else if(a.type==='array_sw'){
     addField(inner,'Array:','ci-arr','10,20,5,15,30,25','200px','integers comma-separated');
@@ -279,7 +330,30 @@ function buildInputPanel(id){
       clearInputError();
       state.extra.xorArr=arr;renderXOR([],0,null);setStatus(`${arr.length} elements`);
     });
-  } else if(a.type==='nim'){
+  }
+
+  else if(a.type==='bin_dec'){
+    const mode=state.extra.bdMode||'b2d';
+    if(mode==='b2d'){
+      addField(inner,'Binary:','ci-bd-val','1011','150px','only 0s and 1s, e.g. 1011');
+    } else {
+      addField(inner,'Decimal:','ci-bd-val','11','120px','positive integer');
+    }
+    addApply(inner,()=>{
+      const val=document.getElementById('ci-bd-val').value.trim();
+      const mode=state.extra.bdMode||'b2d';
+      if(mode==='b2d'&&!/^[01]+$/.test(val)){showInputError('Binary must contain only 0s and 1s.');return;}
+      if(mode==='d2b'&&(isNaN(parseInt(val))||parseInt(val)<0)){showInputError('Enter a valid positive integer.');return;}
+      clearInputError();
+      state.extra.bdVal=val;
+      state.steps=[];state.stepIdx=0;state.arena=false;state.running=false;clearTimeout(state.timer);
+      const bA=document.getElementById('btn-arena');if(bA){bA.classList.remove('active');bA.textContent='🎮 Arena';}
+      initBinDec();
+      setStatus(`Loaded: ${val} — click ▶ Start`);
+    });
+  }
+  
+   else if(a.type==='nim'){
     addField(inner,'Heap sizes:','ci-heaps','3,5,7','150px','positive integers');
     addApply(inner,()=>{
       const heaps=parseInts(document.getElementById('ci-heaps').value).filter(h=>h>0);
@@ -324,6 +398,12 @@ function handleStartBtn(){
   const a=ALGOS[state.current];if(!a||state.running)return;
   const resuming=!!(state.paused&&state.steps&&state.steps.length>0&&state.stepIdx<state.steps.length);
   state.paused=false;_restoreStartBtn();
+  if(a.type==='sort_compare'){
+    const canResume=state.paused&&state.extra.cmpData&&Object.values(state.extra.cmpData).some(d=>!d.done);
+    if(canResume){state.running=true;setStatus('Racing…',true);_cmpTick();}
+    else{initSortCompare();if(state.extra.cmpData)runSortCompare();}
+    return;
+  }
   if(a.type==='grid'){startGridViz(state.current,resuming);}
   else{startViz(resuming);}
 }
@@ -337,11 +417,49 @@ function buildControls(id,a){
   const ctrl=document.getElementById('av-controls');ctrl.innerHTML='';
   ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Speed</span><input type='range' min='1' max='10' value='${state.speed}' id='ctrl-speed'>`));
   document.getElementById('ctrl-speed').oninput=e=>{state.speed=+e.target.value;};
+  if(a.approaches&&a.approaches.length>1){
+    const curAp=state.extra.approach||a.approaches[a.approaches.length-1].key;
+    ctrl.appendChild(mkSep());
+    const apWrap=document.createElement('div');apWrap.className='ctrl-group approach-pills';
+    const apLbl=document.createElement('span');apLbl.className='ctrl-label';apLbl.textContent='Approach:';
+    apWrap.appendChild(apLbl);
+    a.approaches.forEach(apDef=>{
+      const isActive=apDef.key===curAp;
+      const btn=document.createElement('button');
+      btn.id=`ap-btn-${apDef.key}`;
+      btn.className='btn btn-approach'+(isActive?' active':'');
+      btn.style.cssText=`font-size:10px;padding:4px 10px;border-radius:999px;border:1px solid ${isActive?apDef.color:apDef.color+'55'};color:${apDef.color};background:${isActive?apDef.color+'22':'transparent'};transition:all .15s;white-space:nowrap;cursor:pointer;font-family:var(--font-mono);`;
+      btn.innerHTML=`${apDef.label} <span style="opacity:.65;font-size:9px;">${apDef.badge}</span>`;
+      btn.onmouseover=()=>{if(!btn.classList.contains('active'))btn.style.background=apDef.color+'11';};
+      btn.onmouseout=()=>{if(!btn.classList.contains('active'))btn.style.background='transparent';};
+      btn.onclick=()=>{if(apDef.key!==state.extra.approach)setApproach(apDef.key);};
+      apWrap.appendChild(btn);
+    });
+    ctrl.appendChild(apWrap);
+    ctrl.appendChild(mkSep());
+  }
   if(a.type==='sort'){
     ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>Size</span><input type='number' min='5' max='60' value='30' id='ctrl-size' style='width:58px'>`));
     ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
     ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
     ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>initSort(id)));
+  } else if(a.type==='sort_compare'){
+    ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>n</span><input type='number' min='5' max='60' value='30' id='ctrl-cmp-size' style='width:52px'>`));
+    ctrl.appendChild(mkSep());
+    const togWrap=document.createElement('div');togWrap.className='ctrl-group';togWrap.style.cssText='gap:4px;';
+    const togNames={bubble:'Bubble',merge:'Merge',quick:'Quick',heap:'Heap'};
+    ['bubble','merge','quick','heap'].forEach(algoId=>{
+      const b=document.createElement('button');
+      b.className='btn btn-mode active';b.id=`cmp-tog-${algoId}`;
+      b.style.cssText='font-size:10px;padding:4px 9px;';b.textContent=togNames[algoId];
+      b.onclick=()=>_cmpToggleAlgo(algoId);
+      togWrap.appendChild(b);
+    });
+    ctrl.appendChild(togWrap);
+    ctrl.appendChild(mkSep());
+    ctrl.appendChild(mkBtn('▶ Race!','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ New Array','btn-danger',()=>buildViz(id,a)));
   } else if(a.type==='array_sw'){
     ctrl.appendChild(mkCtrl(`<span class='ctrl-label'>k =</span><input type='number' min='1' max='30' value='4' id='ctrl-sw-k' style='width:52px'>`));
     ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
@@ -420,7 +538,15 @@ function buildControls(id,a){
     ctrl.appendChild(mkBtn('▶ Start','btn-primary',()=>handleStartBtn(),'btn-start'));
     ctrl.appendChild(mkBtn('↺ New','btn-danger',()=>buildViz(id,a)));
   }
-  appendArena(ctrl);
+  else if(a.type==='bin_dec'){
+    ctrl.appendChild(mkBtn('Bin→Dec','btn-mode active',()=>setBinDecMode('b2d'),'bd-b2d'));
+    ctrl.appendChild(mkBtn('Dec→Bin','btn-mode',()=>setBinDecMode('d2b'),'bd-d2b'));
+    ctrl.appendChild(mkSep());
+    ctrl.appendChild(mkBtn('▶ Run','btn-primary',()=>handleStartBtn(),'btn-start'));
+    ctrl.appendChild(mkBtn('⏸ Pause','btn-secondary',pauseViz));
+    ctrl.appendChild(mkBtn('↺ Reset','btn-danger',()=>buildViz(id,a)));
+  }
+  if(a.type!=='sort_compare')appendArena(ctrl);
   ctrl.appendChild(mkSep());
   ctrl.appendChild(mkBtn('📝 Custom Input','btn-input',()=>toggleInputPanel(id),'btn-input'));
   ctrl.appendChild(mkCtrl(`<span class='status-badge' id='status-badge'>Ready</span>`));
@@ -486,11 +612,23 @@ function stepBack(){
 function buildViz(id,a){
   state.running=false;state.paused=false;clearTimeout(state.timer);state.steps=[];state.stepIdx=0;state.arena=false;
   _restoreStartBtn();
-  state.extra={};
+  const savedApproach=state.extra.approach;
+  const savedCustom={
+    _customSW:state.extra._customSW,_customTP:state.extra._customTP,
+    _customKadane:state.extra._customKadane,_customBM:state.extra._customBM,
+    _customTarget:state.extra._customTarget,_customArr:state.extra._customArr,
+    fibN:state.extra.fibN,
+    lcsS1:state.extra.lcsS1,lcsS2:state.extra.lcsS2,
+    ksW:state.extra.ksW,ksN:state.extra.ksN,ksWts:state.extra.ksWts,ksVals:state.extra.ksVals,
+    beA:state.extra.beA,beB:state.extra.beB,beMod:state.extra.beMod,
+    cmpCustomArr:state.extra.cmpCustomArr
+  };
+  state.extra={approach:savedApproach,...savedCustom};
   _lastExplain='';
   const b=document.getElementById('btn-arena');if(b){b.classList.remove('active');b.textContent='🎮 Arena';}
   document.getElementById('av-canvas').innerHTML='';
   if(a.type==='sort')initSort(id);
+  else if(a.type==='sort_compare'){state.extra.cmpCustomArr=null;initSortCompare();}
   else if(a.type==='array_sw')initArraySW();
   else if(a.type==='array_tp')initArrayTP();
   else if(a.type==='array_kadane')initKadane();
@@ -504,6 +642,7 @@ function buildViz(id,a){
   else if(a.type==='dp_lcs')initLCS();
   else if(a.type==='binexp')initBinExp();
   else if(a.type==='xor')initXOR();
+  else if(a.type==='bin_dec')initBinDec();
   else if(a.type==='nim')initNim();
   else if(a.type==='grundy')initGrundy();
   else if(a.type==='cycle_u')initCycleU();
@@ -548,17 +687,42 @@ function startViz(resuming=false){
 }
 function regenSteps(a){
   state.stepIdx=0;
-  if(a.type==='sort'){if(state.arr&&state.arr.length){state.steps=genSortSteps(state.current,[...state.arr]);state.renderFn=fr=>renderSort(fr.arr,fr.states);}}
+  const ap=state.extra.approach||'optimal';
+  if(a.type==='sort'){if(state.arr&&state.arr.length){state.steps=genSortSteps(state.current,[...state.arr]);state.renderFn=fr=>renderSort(fr.arr,fr.states,fr.comparisons||0,fr.swaps||0);}}
+  else if(a.type==='sort_compare'){initSortCompare();}
   else if(a.type==='array_sw')genSWSteps();
-  else if(a.type==='array_tp')genTPSteps();
-  else if(a.type==='array_kadane')genKadaneSteps();
-  else if(a.type==='array_bm')genBoyerMooreSteps();
+  else if(a.type==='array_tp'){
+    if(ap==='brute'&&typeof genTPBruteSteps==='function')genTPBruteSteps();
+    else genTPSteps();
+  }
+  else if(a.type==='array_kadane'){
+    if(ap==='brute'&&typeof genKadaneBruteSteps==='function')genKadaneBruteSteps();
+    else genKadaneSteps();
+  }
+  else if(a.type==='array_bm'){
+    if(ap==='brute'&&typeof genBMBruteSteps==='function')genBMBruteSteps();
+    else genBoyerMooreSteps();
+  }
   else if(a.type==='graph')genGraphSteps();
-  else if(a.type==='dp_fib')genFibSteps();
-  else if(a.type==='dp_ks')genKSSteps();
-  else if(a.type==='dp_lcs')genLCSSteps();
-  else if(a.type==='binexp')genBinExpSteps();
+  else if(a.type==='dp_fib'){
+    if(ap==='brute'&&typeof genFibBruteSteps==='function')genFibBruteSteps();
+    else if(ap==='memo'&&typeof genFibMemoSteps==='function')genFibMemoSteps();
+    else genFibSteps();
+  }
+  else if(a.type==='dp_ks'){
+    if(ap==='brute'&&typeof genKSBruteSteps==='function')genKSBruteSteps();
+    else genKSSteps();
+  }
+  else if(a.type==='dp_lcs'){
+    if(ap==='brute'&&typeof genLCSBruteSteps==='function')genLCSBruteSteps();
+    else genLCSSteps();
+  }
+  else if(a.type==='binexp'){
+    if(ap==='brute'&&typeof genBinExpBruteSteps==='function')genBinExpBruteSteps();
+    else genBinExpSteps();
+  }
   else if(a.type==='xor')genXORSteps();
+  else if(a.type==='bin_dec')genBinDecSteps();
   else if(a.type==='nim')genNimSteps();
   else if(a.type==='grundy')genGrundySteps();
   else if(a.type==='cycle_u')genCycleUSteps();
